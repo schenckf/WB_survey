@@ -1,0 +1,396 @@
+---
+title: "MA-DMF West Beach Survey Data"
+author: "Forest Schenck"
+date: "November 07, 2017"
+output: pdf_document
+---
+
+#Packages etc...
+```{r}
+rm(list = ls())
+
+library(dplyr)
+library(sciplot)
+library(ggplot2)
+library(tidyr)
+library(vegan)
+
+source("http://faraway.neu.edu/data/Rprofile")
+
+```
+
+#Uploading Data
+```{r}
+wb <- read.csv("WB_surveydata.csv", header = T)
+
+wb.5shoot.binom <- read.csv("WastingDiseasePA_31OCT2017.csv", header = T)
+```
+
+#Data Vizualization
+##5-shoot data
+###Shallow vs. Deep
+```{r}
+#wb.depth <- filter(wb, depth != "mid")
+
+#bargraph.CI(x.factor = depth, response = wd.prevalence, main = "5-shoot Prevalence", data = wb.depth, ylim = c(0,1.1), ylab = "proportion of shoots infected per plot")
+
+
+```
+
+###July vs. October (split by deep and shallow)
+```{r}
+#prevalence (presence vs absence)
+bargraph.CI(x.factor = month.collected,
+            response = wd.prevalence,
+            group = depth,
+            data = wb,
+            ylim = c(0,1.1),
+            main = "5-shoot Prevalence",
+            ylab = "proportion of shoots infected per plot", legend = T)
+
+#various lesion severity levels
+##trace
+#wb.depth$WD.field.est.trace.p <- wb.depth$WD.field.est.trace / (wb.depth$WD.field.est.absent + wb.depth$WD.field.est.trace + wb.depth$WD.field.est.low + wb.depth$WD.field.est.mid + wb.depth$WD.field.est.high)
+
+#bargraph.CI(x.factor = month.collected, response = WD.field.est.trace.p, group = depth, data = wb.depth, ylim = c(0,1.1), main = "5-shoot Trace", ylab = "proportion of shoots with 1% lesion cover per plot", legend = T)
+
+##low
+#wb.depth$WD.field.est.low.p <- wb.depth$WD.field.est.low / (wb.depth$WD.field.est.absent + wb.depth$WD.field.est.trace + wb.depth$WD.field.est.low + wb.depth$WD.field.est.mid + wb.depth$WD.field.est.high)
+
+#bargraph.CI(x.factor = month.collected, response = WD.field.est.low.p, group = depth, data = wb.depth, ylim = c(0,1.1), main = "5-shoot Low", ylab = "proportion of shoots with 2-10% lesion cover per plot", legend = T)
+
+##mid
+#wb.depth$WD.field.est.mid.p <- wb.depth$WD.field.est.mid / (wb.depth$WD.field.est.absent + wb.depth$WD.field.est.trace + wb.depth$WD.field.est.low + wb.depth$WD.field.est.mid + wb.depth$WD.field.est.high)
+
+#bargraph.CI(x.factor = month.collected, response = WD.field.est.mid.p, group = depth, data = wb.depth, ylim = c(0,1.1), main = "5-shoot Mid", ylab = "proportion of shoots with 11-30% lesion cover per plot", legend = T)
+
+##high - No high infections observed
+
+## plotting prevalence by month and depth and split by infection severity
+
+#wb.depth.long <- gather(wb.depth, lesion.cover, no.samples, WD.field.est.absent:WD.field.est.high) #makes rows for each lesion.cover category
+
+#wb.depth.long2 <- wb.depth.long %>%
+  #group_by(month.collected, depth, quadrat.id) %>%
+  #summarize(no.samples.total = sum(no.samples, na.rm = T)) #calculating samples per quadrat
+
+#wb.depth.long <- merge(wb.depth.long, wb.depth.long2, by = c("month.collected", "depth", "quadrat.id")) #adding samples per quadrat into dataframe
+
+#wb.depth.long$no.sample.prop <- wb.depth.long$no.samples/wb.depth.long$no.samples.total
+
+#wb.depth.long.plot <- wb.depth.long %>%
+  #group_by(month.collected, depth, lesion.cover) %>%
+  #summarize(no.samples.prop = mean(no.sample.prop, na.rm = T), sd.prop = sd(no.sample.prop, na.rm = T)) #depth by month averages for each lesion cover type
+
+#str(wb.depth.long.plot)
+
+#ordering lesion.cover factor
+#wb.depth.long.plot$lesion.cover <-as.factor(wb.depth.long.plot$lesion.cover)
+#print(levels(wb.depth.long.plot$lesion.cover))
+#wb.depth.long.plot$lesion.cover <- factor(wb.depth.long.plot$lesion.cover, levels(wb.depth.long.plot$lesion.cover)[c(1, 5, 3, 4, 2)])
+
+#ggplot(data = wb.depth.long.plot, aes(x = depth, y = no.samples.prop, fill = lesion.cover)) +
+  #geom_bar(stat = "identity", colour = "black") +
+  #facet_grid(~month.collected) +
+  #scale_fill_manual(values = c("white", "yellow", "orange", "red", "purple")) +
+  #labs(title = "Lesion Prevalence by collection month, transect depth and lesion % cover", x = "", y = "Mean proportion of samples with lesions per plot", fill = "Lesion % cover") +
+  #theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), panel.background = element_blank(), axis.line = element_line(colour ="black"))
+
+###Lesion prevalence analyses
+wb.5shoot.binom$wd.absent <- 1 - wb.5shoot.binom$wd.present
+
+wb.5shoot.binom.ds <- wb.5shoot.binom %>%
+  filter(depth != 'mid')
+
+##binom model
+model <- glm(cbind(wd.present, wd.absent) ~ month.collected/depth, na.action = na.omit, data = wb.5shoot.binom.ds, family = binomial)
+anova(model, test = "LR") ### add quadrat as a random effect give each quadrat a unique identifier
+
+model <- lm(zm.veg.density ~ month.collected * depth, na.action = na.omit, data = wb.5shoot.binom.ds) #density analyses
+anova(model) #depth not month significant
+
+##analyzing proportion of samples in anova.
+model <- lm(wd.prevalence ~ depth * month.collected + month.collected/depth/quadrat.id, data = wb)
+anova(model)
+```
+
+###NMDS
+```{r}
+###DATA ORGANIZATION
+wb.nmds <- wb[!is.na(wb$WD.field.est.absent) & 
+                !is.na(wb$WD.field.qual.trace) &
+                !is.na(wb$WD.field.est.low) &
+                !is.na(wb$WD.field.est.mid) &
+                !is.na(wb$zm.veg.density0.0625m2) &
+                !is.na(wb$canopy.height.cm) &
+                wb$depth != "mid", ]
+
+wb.nmds$WD.field.est.absent.p <- 1-wb.nmds$wd.prevalence
+
+wb.nmds$WD.field.est.trace.p <- wb.nmds$WD.field.est.trace / (wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.trace + wb.nmds$WD.field.est.low + wb.nmds$WD.field.est.mid + wb.nmds$WD.field.est.high)
+
+wb.nmds$WD.field.est.low.p <- wb.nmds$WD.field.est.low / (wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.trace + wb.nmds$WD.field.est.low + wb.nmds$WD.field.est.mid + wb.nmds$WD.field.est.high)
+
+wb.nmds$WD.field.est.mid.p <- wb.nmds$WD.field.est.mid / (wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.trace + wb.nmds$WD.field.est.low + wb.nmds$WD.field.est.mid + wb.nmds$WD.field.est.high)
+
+wb.nmds$month.depth <- paste(wb.nmds$month.collected, wb.nmds$depth, sep = ".")
+
+wb.nmds$month.depth <- as.factor(wb.nmds$month.depth)
+
+community <- subset(wb.nmds, select = c("WD.field.est.absent.p",
+                                        "WD.field.est.trace.p",
+                                        "WD.field.est.low.p",
+                                        "WD.field.est.mid.p"))
+
+str(wb.nmds)
+
+## --- nMDS Analysis/figures ---
+set.seed(1)
+
+# Hellinger transformation to downplay the effects of rare species
+# community.trans <- decostand(community, "hell")
+
+comm.mds <- metaMDS(community, autotransform = FALSE) ##nMDS analysis code
+
+# Rsquared
+(Rsq <- 1 - comm.mds$stress^2) #high Rsquared means that axis explain most of variation in data
+
+# Extract quadrat scores from nMDS object to facilitate custom plot
+quad.scores <- comm.mds$points
+
+# Extract disease severity category scores (commonly species scores)
+severity.scores <- comm.mds$species
+
+# Relabel severity scores
+rownames(severity.scores) <- c("Absent", "Trace", 
+                              "Low", "Mid")
+
+mycols.month.depth <- cb[c("blue",  "turquoise", "red" , "orange")] ##setting up vector to color points by depth, data set won't ignore third depth so added extra for 'ghost' mid depth)
+
+## Prepare an empty plot
+#pdf(file="nmds_meanMaxTemp.pdf", width=8, height=8)
+par(plotconf)
+plot(comm.mds$points[ , 1], comm.mds$points[ , 2], t = "n", 
+     xlab = "nMDS 1", ylab = "",
+     main= "",
+     xlim = c(-1.25, 1.25), 
+     xaxs = "i",
+     ylim = c(-1, 1))
+# Add y-axis label
+ylabel("nMDS 2")
+# Add top and right axes
+mbox()
+## Draw grid with dashed lines about origin
+abline(h = 0, lty = 2)
+abline(v = 0, lty = 2)
+add_label(x = 0.78, lab = substitute(paste(R^2 == rsq),
+                                     list(rsq = format(Rsq, digit = 5))))
+
+# Plot each region's site scores in a different color and shape
+for (i in 1:length(levels(wb.nmds$month.depth))) {
+  locs <- which(wb.nmds$month.depth == levels(wb.nmds$month.depth)[i])
+  p <- quad.scores[locs, 1:2]
+  points(p[ , 1], p[ , 2], pch = i + 20, 
+         bg = mycols.month.depth[i], 
+         col = mycols.month.depth[i])
+}
+
+month.depth.names <- paste(levels(wb.nmds$month.depth)) #, "month")
+legend(x = "topleft", legend = month.depth.names, pch = (1:4) + 20, 
+       col = mycols.month.depth, 
+       pt.bg = mycols.month.depth)
+text(severity.scores, rownames(severity.scores), col = cb["pink"])
+
+regions <- wb.nmds$month.collected
+#regions2 <- wb$depth
+
+expl.all <- subset(wb.nmds, select = c("zm.veg.density0.0625m2", 
+                                      "canopy.height.cm",
+                                      "month.collected",
+                                      "depth"))
+
+env <- subset(wb.nmds, select = c("month.collected",
+                                  "depth"))
+
+biotic <- subset(wb.nmds, select = c("zm.veg.density0.0625m2", 
+                                      "canopy.height.cm"))
+
+expl.fit <- envfit(comm.mds, expl.all, permu = 999, na.rm = TRUE)
+env.fit <- envfit(comm.mds, env, permu = 999, na.rm = TRUE)
+biotic.fit <- envfit(comm.mds, biotic, permu = 999, na.rm = TRUE)
+expl.fit
+env.fit
+biotic.fit
+
+rownames(expl.fit$factors$centroids) <- c("July", "October" , "" , "")
+rownames(expl.fit$vectors$arrows) <- c("Density", "Length")
+
+expl.fit2 <- expl.fit
+#expl.fit2$vectors <- NULL
+
+# Plot 95% CI ellipses
+plot(expl.fit2, p.max = 0.2, col = cb["black"])
+pl <- ordiellipse(comm.mds, regions, kind = "se", conf = 0.95, lwd = 2, 
+                  draw = "poly", col = cb["grey"], alpha = 40, label = FALSE)
+
+```
+
+
+###PCA
+```{r}
+#PCA
+###DATA ORGANIZATION
+wb.nmds$WD.field.est.absent.p <- 1-wb.depth$wd.prevalence
+wb.nmds$total.count <- (wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.trace + wb.depth$WD.field.est.low + wb.depth$WD.field.est.mid + wb.depth$WD.field.est.high)
+
+
+wb.pca <- wb.depth %>%
+  filter(total.count != "NA")
+wb.pca <- data.frame(wb.pca$month.collected, wb.pca$depth, wb.pca$WD.field.est.absent, wb.pca$WD.field.est.trace, wb.pca$WD.field.est.low, wb.pca$WD.field.est.mid)
+
+colnames(wb.pca) <- c("month", "depth", "absent", "trace", "low", "mid")
+
+PCA.res <- prcomp(wb.pca[,3:6], scale. = T)
+
+summary(PCA.res) #the proportion of variance explained by each component
+
+##FIG
+par(las =1, mgp = c(2.5, 0.2, 0), mfrow = c(1,1), mar = c(3.75,4,0.5,0.375), tck = 0.01)
+#par(oma = c(2, 1, 1, 1))
+
+screeplot(PCA.res, bstick = TRUE, bst.col = "black", ylab = "Eigenvalue", legend = "", ptype = "points", col = "white", main = "")
+
+bstick(PCA.res) #broken stick values
+
+bp.scree <- barplot(height = PCA.res$sdev^2, names.arg = c("PC1", "PC2", "PC3", "PC4"), space = 0.2, col = "white", ylim = c(0,4), ylab = "Eigenvalue")
+points(x = bp.scree, bstick(PCA.res),
+     pch = 1)
+
+op <- par("usr")
+
+PCA.res$rotation[,1:4] #how much each factor loads on each PCA
+PCA.res$sdev^2 #eigenvalue
+
+biplot(PCA.res)
+
+PCA.plot.data <- data.frame(PCA.res$x[,1:2])
+PCA.res
+
+pca
+
+str(wb.pca)
+
+wb.pca$absent <- as.numeric(wb.pca$absent)
+wb.pca$trace <- as.numeric(wb.pca$trace)
+wb.pca$low <- as.numeric(wb.pca$low)
+wb.pca$mid <- as.numeric(wb.pca$mid)
+
+pca <- prcomp(wb.pca[,unlist(lapply(wb.pca, FUN=class))=="numeric"])
+plot(PCA.res$x[,1:2], pch=16, col=as.numeric(wb.pca[,"month"]), main="Color annotation") # 2 first principal components
+legend("bottomleft", pch=16, col=unique(as.numeric(wb.pca[,"month"])), legend=unique(wb.pca[,"month"]))
+
+plot(PCA.res$x[,1:2], pch=16, col=as.numeric(wb.pca[,"depth"]), main="Color annotation") # 2 first principal components
+legend("bottomleft", pch=16, col=unique(as.numeric(wb.pca[,"depth"])), legend=unique(wb.pca[,"depth"]))
+
+PCA.plot.data$PC1.jitter <- jitter(PCA.plot.data$PC1, 50)
+PCA.plot.data$PC2.jitter <- jitter(PCA.plot.data$PC2, 50)
+
+plot(PC2.jitter ~ PC1.jitter, pch=as.numeric(wb.pca[,"depth"]), col=as.numeric(wb.pca[,"month"]), main="", xlim=c(-3,3), data = PCA.plot.data) # 2 first principal components
+legend("bottomleft", pch = 18, col=unique(as.numeric(wb.pca[,"month"])), legend=unique(wb.pca[,"month"]))
+legend("bottomright", pch=unique(as.numeric(wb.pca[,"depth"])), legend=unique(wb.pca[,"depth"]))
+```
+
+###Prevalence by Canopy Length and shoot density
+```{r}
+plot(wd.prevalence ~ canopy.height.cm, data = filter(wb.depth, wd.prevalence != "NA"), ylim = c(0,1.1))
+
+plot(wd.prevalence ~ zm.veg.density0.0625m2, data = filter(wb.depth, wd.prevalence != "NA"), ylim = c(0,1.1))
+
+#BINOMIAL PLOTS
+##Canopy.height
+plot(wb.5shoot.binom$canopy.height, wb.5shoot.binom$wd.present,
+     xlab = "Canopy Height (cm)",
+     ylab = "Probability of disease")
+
+model <- glm(wd.present ~ canopy.height, family = binomial(link = 'logit'), data = wb.5shoot.binom)#logistic regression
+summary(model)
+
+curve(predict(model, data.frame(canopy.height = x), type = "resp"), add = T)
+
+##shoot density
+plot(wb.5shoot.binom$zm.veg.density, wb.5shoot.binom$wd.present,
+     xlab = "Density (shoots/0.25x0.25m)",
+     ylab = "Probability of disease")
+
+model <- glm(wd.present ~ zm.veg.density, family = binomial(link = 'logit'), data = wb.5shoot.binom)#logistic regression
+summary(model)
+
+curve(predict(model, data.frame(zm.veg.density = x), type = "resp"), add = T)
+```
+
+##Qualitative plot level
+
+###Shallow vs. Deep
+```{r}
+bargraph.CI(x.factor = depth, response = 1-WD.field.qual.absent, main = "Qualitative Score", data = wb.depth, ylim = c(0,1.1), ylab = "proportion of plots with infections")
+```
+
+###July vs. October (split by deep and shallow)
+```{r}
+#prevalence (presence vs absence)
+bargraph.CI(x.factor = month.collected, response = 1-WD.field.qual.absent, group = depth, data = wb.depth, ylim = c(0,1.1), main = "Qualitative", ylab = "proportion of plots with infections", legend = T)
+
+## plotting prevalence by month and depth and split by infection severity
+
+wb.depth.long.qual <- gather(wb.depth, lesion.cover, no.samples, WD.field.qual.absent:WD.field.qual.low) #makes rows for each lesion.cover category
+
+wb.depth.long.qual.plot <- wb.depth.long.qual %>%
+  group_by(month.collected, depth, lesion.cover) %>%
+  summarize(no.samples = mean(no.samples, na.rm = T)) #depth by month averages for each lesion cover type
+
+str(wb.depth.long.qual.plot)
+
+#ordering lesion.cover factor
+wb.depth.long.qual.plot$lesion.cover <-as.factor(wb.depth.long.qual.plot$lesion.cover)
+print(levels(wb.depth.long.qual.plot$lesion.cover))
+wb.depth.long.qual.plot$lesion.cover <- factor(wb.depth.long.qual.plot$lesion.cover, levels(wb.depth.long.qual.plot$lesion.cover)[c(1, 3, 2)])
+
+ggplot(data = wb.depth.long.qual.plot, aes(x = depth, y = no.samples, fill = lesion.cover)) +
+  geom_bar(stat = "identity", colour = "black") +
+  facet_grid(~month.collected) +
+  scale_fill_manual(values = c("white", "yellow", "orange")) +
+  labs(title = "Qualitative lesion prevalence by collection month, transect depth and lesion % cover",
+       x = "", y = "Proportion of plots with lesion severity type", fill = "Lesion % cover") +
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), 
+        panel.background = element_blank(), axis.line = element_line(colour ="black"))
+
+###Lesion prevalence analyses
+wb.depth$WD.field.qual.present <- 1 - wb.depth$WD.field.qual.absent
+
+model <- glm(cbind(WD.field.qual.present, WD.field.qual.absent) ~ depth * month.collected, na.action = na.omit, data = wb.depth, family = binomial)
+anova(model, test = "LR")
+```
+
+###Prevalence by Canopy Length and shoot density
+```{r}
+##Canopy.height
+plot(wb.depth$canopy.height, 1-wb.depth$WD.field.qual.absent,
+     xlab = "Canopy Height (cm)",
+     ylab = "Probability of disease")
+
+model <- glm(1-WD.field.qual.absent ~ canopy.height.cm, family = binomial(link = 'logit'), data = wb.depth)#logistic regression
+summary(model)
+
+curve(predict(model, data.frame(canopy.height.cm = x), type = "resp"), add = T)
+
+##shoot density
+plot(wb.depth$zm.veg.density0.0625m2, 1-wb.depth$WD.field.qual.absent,
+     xlab = "Density (shoots/0.25x0.25m)",
+     ylab = "Probability of disease")
+
+model <- glm(1-WD.field.qual.absent ~ zm.veg.density0.0625m2, family = binomial(link = 'logit'), data = wb.depth)#logistic regression
+summary(model)
+
+curve(predict(model, data.frame(zm.veg.density0.0625m2 = x), type = "resp"), add = T)
+```
+
