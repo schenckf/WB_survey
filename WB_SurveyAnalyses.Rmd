@@ -40,9 +40,9 @@ wb.5shoot.binom <- read.csv("WastingDiseasePA_31OCT2017.csv", header = T)
 ###July vs. October (split by deep and shallow)
 ```{r}
 #prevalence (presence vs absence)
-bargraph.CI(x.factor = month.collected,
+bargraph.CI(x.factor = depth,
             response = wd.prevalence,
-            group = depth,
+            #group = depth,
             data = wb,
             ylim = c(0,1.1),
             main = "5-shoot Prevalence",
@@ -100,10 +100,13 @@ bargraph.CI(x.factor = month.collected,
 wb.5shoot.binom$wd.absent <- 1 - wb.5shoot.binom$wd.present
 
 wb.5shoot.binom.ds <- wb.5shoot.binom %>%
-  filter(depth != 'mid')
+  filter(depth != 'mid') %>%
+  group_by(year.collected, month.collected, depth, quadrat.id) %>%
+  summarize(zm.veg.density = mean(zm.veg.density, na.rm = T), canopy.height = mean(canopy.height, na.rm = T), wd.present = sum(wd.present, na.rm = T), wd.absent = sum(wd.absent, na.rm = T))
+
 
 ##binom model
-model <- glm(cbind(wd.present, wd.absent) ~ month.collected/depth, na.action = na.omit, data = wb.5shoot.binom.ds, family = binomial)
+model <- glm(cbind(wd.present, wd.absent) ~ month.collected*depth, na.action = na.omit, data = wb.5shoot.binom.ds, family = binomial)
 anova(model, test = "LR") ### add quadrat as a random effect give each quadrat a unique identifier
 
 model <- lm(zm.veg.density ~ month.collected * depth, na.action = na.omit, data = wb.5shoot.binom.ds) #density analyses
