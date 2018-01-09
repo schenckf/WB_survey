@@ -1,0 +1,103 @@
+---
+title: "MR_Test"
+author: "Forest Schenck"
+date: "1/9/2018"
+output: pdf_document
+---
+
+#functions
+```{r}
+library(tidyr)
+library(dplyr)
+```
+
+#Data
+```{r}
+mr.test <- read.csv("MR_TestData.csv", header = T)
+
+str(mr.test)
+
+mr.test.bt <- data.frame(mr.test$scan.id, mr.test$leaf.no, mr.test$MR.broken.tip, mr.test$FS.broken.tip)
+```
+
+#Analyses
+##Leaf LENGTH
+```{r}
+plot(MR.length.cm ~ FS.length.cm, data = mr.test, col = mr.test$leaf.no)
+abline(a = 0, b = 1, col = "gray60", lty = 2)
+abline(m.length)
+legend("topleft", legend = c(1,2,3,4), pch = c(1,1,1,1), col = c("black", "red", "green", "blue"))
+
+m.length <- lm((MR.length.cm-FS.length.cm) ~ FS.length.cm, data = mr.test)
+summary(m.length)
+
+m.length <- lm(MR.length.cm ~ FS.length.cm, data = mr.test)
+```
+
+##Leaf AREA
+```{r}
+plot(MR.area.cm2 ~ FS.area.cm2, data = mr.test, col = mr.test$leaf.no)
+abline(a = 0, b = 1, col = "gray60", lty = 2)
+abline(m.leafarea)
+legend("topleft", legend = c(1,2,3,4), pch = c(1,1,1,1), col = c("black", "red", "green", "blue"))
+
+m.leafarea <- lm((MR.area.cm2-FS.area.cm2) ~ FS.area.cm2, data = mr.test)
+summary(m.leafarea)
+
+m.leafarea <- lm(MR.area.cm2 ~ FS.area.cm2, data = mr.test)
+```
+
+##Lesion AREA
+```{r}
+plot(MR.lesion.area.cm2 ~ FS.lesion.area.cm2, data = mr.test, col = mr.test$leaf.no)
+abline(a = 0, b = 1, col = "gray60", lty = 2)
+abline(m.lesa)
+legend("topleft", legend = c(1,2,3,4), pch = c(1,1,1,1), col = c("black", "red", "green", "blue"))
+
+m.lesa <- lm((MR.lesion.area.cm2-FS.lesion.area.cm2) ~ FS.lesion.area.cm2, data = mr.test)
+summary(m.lesa)
+
+m.lesa <- lm(MR.lesion.area.cm2 ~ FS.lesion.area.cm2, data = mr.test)
+```
+
+##Lesion NUMBER
+```{r}
+plot(MR.lesion.no ~ FS.lesion.no, data = mr.test, col = mr.test$leaf.no, ylim = c(0,20), xlim = c(0,20))
+abline(a = 0, b = 1, col = "gray60", lty = 2)
+abline(m.lesno)
+legend("topleft", legend = c(1,2,3,4), pch = c(1,1,1,1), col = c("black", "red", "green", "blue"))
+
+m.lesno <- lm((MR.lesion.no-FS.lesion.no) ~ FS.lesion.no, data = mr.test)
+summary(m.lesno)
+
+m.lesno <- lm(MR.lesion.no ~ FS.lesion.no, data = mr.test)
+```
+
+##Grazing AREA
+```{r}
+plot(MR.grazing.area.cm2 ~ FS.grazing.area.cm2, data = mr.test, col = mr.test$leaf.no, ylim = c(0,0.8))
+abline(a = 0, b = 1, col = "gray60", lty = 2)
+abline(m.graza)
+legend("topleft", legend = c(1,2,3,4), pch = c(1,1,1,1), col = c("black", "red", "green", "blue"))
+
+m.graza <- lm((MR.grazing.area.cm2-FS.grazing.area.cm2) ~ FS.grazing.area.cm2, data = filter(mr.test, FS.grazing.area.cm2 < 0.5))
+summary(m.graza)
+
+m.graza <- lm(MR.grazing.area.cm2 ~ FS.grazing.area.cm2, data = mr.test)
+```
+
+##Grazing NUMBER
+```{r}
+plot(MR.grazing.no ~ FS.grazing.no, data = mr.test, col = mr.test$leaf.no, ylim = c(0,8))
+abline(a = 0, b = 1, col = "gray60", lty = 2)
+abline(m.grazno)
+legend("topleft", legend = c(1,2,3,4), pch = c(1,1,1,1), col = c("black", "red", "green", "blue"))
+
+m.grazno <- lm((MR.grazing.no-FS.grazing.no) ~ FS.grazing.no, data = filter(mr.test, FS.grazing.no < 5))
+summary(m.grazno)
+
+m.grazno <- lm(MR.grazing.no ~ FS.grazing.no, data = mr.test)
+```
+
+
+
