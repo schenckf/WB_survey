@@ -128,20 +128,19 @@ wb.nmds <- wb[!is.na(wb$WD.field.est.absent) &
                 !is.na(wb$canopy.height.cm) &
                 wb$depth != "mid", ]
 
-wb.nmds$WD.field.est.absent.p <- 1-wb.nmds$wd.prevalence
+#wb.nmds$WD.field.est.absent.p <- 1-wb.nmds$wd.prevalence
 
-wb.nmds$WD.field.est.trace.p <- wb.nmds$WD.field.est.trace / (wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.trace + wb.nmds$WD.field.est.low + wb.nmds$WD.field.est.mid + wb.nmds$WD.field.est.high)
+wb.nmds$WD.field.est.trace.p <- wb.nmds$WD.field.est.trace / (wb.nmds$WD.field.est.trace + wb.nmds$WD.field.est.low + wb.nmds$WD.field.est.mid) #wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.high
 
-wb.nmds$WD.field.est.low.p <- wb.nmds$WD.field.est.low / (wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.trace + wb.nmds$WD.field.est.low + wb.nmds$WD.field.est.mid + wb.nmds$WD.field.est.high)
+wb.nmds$WD.field.est.low.p <- wb.nmds$WD.field.est.low / (wb.nmds$WD.field.est.trace + wb.nmds$WD.field.est.low + wb.nmds$WD.field.est.mid) #wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.high
 
-wb.nmds$WD.field.est.mid.p <- wb.nmds$WD.field.est.mid / (wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.trace + wb.nmds$WD.field.est.low + wb.nmds$WD.field.est.mid + wb.nmds$WD.field.est.high)
+wb.nmds$WD.field.est.mid.p <- wb.nmds$WD.field.est.mid / (wb.nmds$WD.field.est.trace + wb.nmds$WD.field.est.low + wb.nmds$WD.field.est.mid) # wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.high
 
 wb.nmds$month.depth <- paste(wb.nmds$month.collected, wb.nmds$depth, sep = ".")
 
 wb.nmds$month.depth <- as.factor(wb.nmds$month.depth)
 
-community <- subset(wb.nmds, select = c("WD.field.est.absent.p",
-                                        "WD.field.est.trace.p",
+community <- subset(wb.nmds, select = c("WD.field.est.trace.p",
                                         "WD.field.est.low.p",
                                         "WD.field.est.mid.p"))
 
@@ -165,7 +164,7 @@ quad.scores <- comm.mds$points
 severity.scores <- comm.mds$species
 
 # Relabel severity scores
-rownames(severity.scores) <- c("Absent", "Trace", 
+rownames(severity.scores) <- c("Trace", 
                               "Low", "Mid")
 
 mycols.month.depth <- cb[c("blue",  "turquoise", "red" , "orange")] ##setting up vector to color points by depth, data set won't ignore third depth so added extra for 'ghost' mid depth)
