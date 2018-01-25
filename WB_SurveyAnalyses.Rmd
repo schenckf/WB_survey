@@ -43,7 +43,7 @@ wb.5shoot.binom <- read.csv("WastingDiseasePA_31OCT2017.csv", header = T)
 bargraph.CI(x.factor = depth,
             response = wd.prevalence,
             #group = depth,
-            data = wb,
+            data = filter(wb, depth != "mid"),
             ylim = c(0,1.1),
             main = "5-shoot Prevalence",
             ylab = "proportion of shoots infected per plot", legend = T)
@@ -305,9 +305,9 @@ legend("bottomright", pch=unique(as.numeric(wb.pca[,"depth"])), legend=unique(wb
 
 ###Prevalence by Canopy Length and shoot density
 ```{r}
-plot(wd.prevalence ~ canopy.height.cm, data = filter(wb.depth, wd.prevalence != "NA"), ylim = c(0,1.1))
+plot(wd.prevalence ~ canopy.height.cm, data = filter(wb, wd.prevalence != "NA"), ylim = c(0,1.1))
 
-plot(wd.prevalence ~ zm.veg.density0.0625m2, data = filter(wb.depth, wd.prevalence != "NA"), ylim = c(0,1.1))
+plot(wd.prevalence ~ zm.veg.density0.0625m2, data = filter(wb, wd.prevalence != "NA"), ylim = c(0,1.1))
 
 #BINOMIAL PLOTS
 ##Canopy.height
@@ -330,6 +330,33 @@ summary(model)
 
 curve(predict(model, data.frame(zm.veg.density = x), type = "resp"), add = T)
 ```
+
+###Canopy height and density by depth
+```{r}
+bargraph.CI(x.factor = depth,
+            response = zm.veg.density0.0625m2,
+            #group = depth,
+            data = filter(wb, depth != "mid"),
+            ylim = c(0,30),
+            main = "",
+            ylab = "Z. marina density 0.0625 m2", legend = T)
+
+bargraph.CI(x.factor = depth,
+            response = canopy.height.cm,
+            #group = depth,
+            data = filter(wb, depth != "mid"),
+            ylim = c(0,150),
+            main = "",
+            ylab = "Z. marina canopy height cm", legend = T)
+
+model <-aov(zm.veg.density0.0625m2 ~ depth*month.collected, data = filter(wb, depth != "mid"))
+anova(model)
+plot(model)
+
+model <-aov(canopy.height.cm ~ depth * month.collected, data = filter(wb, depth != "mid"))
+anova(model)
+```
+
 
 ##Qualitative plot level
 
