@@ -483,7 +483,7 @@ wb.quad.field <- wb.quad %>%
 ##Field qual vs. wasting index
 ```{r}
 bargraph.CI(x.factor = WD.field.qual,
-            response = WI,
+            response = WSWI,
             data = wb.quad,
             ylim = c(0,20),
             main = "Quad percent cover",
@@ -511,5 +511,19 @@ plot(WI ~ WSWI, data = wb.quad)
 ```
 
 
+```{r}
+bargraph.CI(x.factor=depth,response = WI, group = month.collected, data=wb.quad, main= "WI vs. Depth and Season", legend=T)
+```
 
+  
+```{r}
+depth.quad<- wb.quad %>%
+  dplyr::select(depth, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low)%>%
+  group_by(depth)%>%
+  summarize(absent=sum(WD.field.qual.absent), trace=sum(WD.field.qual.trace), low=sum(WD.field.qual.low))
+  
+  #use table stuff starting line 500 to make mosaicplot. same principle as this code to do by quadrat by season
+  
+```
+  
 
