@@ -23,6 +23,8 @@ source("http://faraway.neu.edu/data/Rprofile")
 ```{r}
 wb <- read.csv("WB_surveydata.csv", header = T)
 
+str(wb)
+
 wb.5shoot.binom <- read.csv("WastingDiseasePA_31OCT2017.csv", header = T)
 ```
 
@@ -422,4 +424,92 @@ summary(model)
 
 curve(predict(model, data.frame(zm.veg.density0.0625m2 = x), type = "resp"), add = T)
 ```
+
+#METHODS COMPARISON
+##DATA Organization
+```{r}
+wb.quad <- wb %>%
+  filter(depth != "mid") %>%
+  dplyr::select(month.collected, year.collected, depth, quadrat.id, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, L1.lesion.area.cm2, L2.lesion.area.cm2, L3.lesion.area.cm2, L4.lesion.area.cm2, L1.area.cm2, L2.area.cm2, L3.area.cm2, L4.area.cm2, no.leaves)
+
+wb.quad$WD.field.qual <- NA
+for (n in 1:48) {
+  if (wb.quad$WD.field.qual.absent[n] == 1)
+  {wb.quad$WD.field.qual[n] = "absent"
+  } else if (wb.quad$WD.field.qual.trace[n] == 1) {
+    wb.quad$WD.field.qual[n] = "trace"
+  } else { wb.quad$WD.field.qual[n] = "low"
+    }
+}
+
+str(wb.quad)
+
+wb.quad$L1.lpc <- (wb.quad$L1.lesion.area.cm2 / wb.quad$L1.area.cm2)*100
+wb.quad$L2.lpc <- (wb.quad$L2.lesion.area.cm2/wb.quad$L2.area.cm2)*100
+wb.quad$L3.lpc <- (wb.quad$L3.lesion.area.cm2/wb.quad$L3.area.cm2)*100
+wb.quad$L4.lpc <- (wb.quad$L4.lesion.area.cm2/wb.quad$L4.area.cm2)*100
+
+wb.quad$WI <- NA
+for (n in 1:48) {
+  wb.quad$WI[n] = max(wb.quad$L1.lpc[n], wb.quad$L2.lpc[n], wb.quad$L3.lpc[n], wb.quad$L4.lpc[n], na.rm = T)
+}
+
+wb.quad$WSWI <- NA
+for (n in 1:48) {
+ wb.quad$WSWI[n] = sum(wb.quad$L1.lpc[n], wb.quad$L2.lpc[n], wb.quad$L3.lpc[n], wb.quad$L4.lpc[n], na.rm = T) / wb.quad$no.leaves[n]
+}
+
+wb.quad$field.est.avg <- (wb.quad$WD.field.est.absent*0 + wb.quad$WD.field.est.trace*1 + wb.quad$WD.field.est.low*2 + wb.quad$WD.field.est.mid*3)/(wb.quad$WD.field.est.absent + wb.quad$WD.field.est.trace + wb.quad$WD.field.est.low + wb.quad$WD.field.est.mid)
+
+wb.quad.field <- wb.quad %>%
+  dplyr::select(WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, WD.field.qual) %>%
+  filter(WD.field.est.absent != "NA") %>%
+  group_by(WD.field.qual) %>%
+  summarize(absent = sum(WD.field.est.absent), trace = sum(WD.field.est.trace), low = sum(WD.field.est.low), mid = sum(WD.field.est.mid))
+
+#wb.quad (data set with all metrics are at the quadrat level)
+  ##WD.field.qual = Categorical wasting disease lesion percent cover estimate by scuba diver within 0.5x0.5m2 quadrat
+  ##L1.lpc-L4.lpc = lesion percent cover {(lesion area - leaf area)/100} of each leaf for each shoot
+  ##WI = wasting index sensu Burdick 1993, i.e. lesion percent cover of most diseased leaf of each shoot
+  ##WSWI = whole shoot wasting index sensu Burdick 1993, i.e. average of lesion percent cover for all leaves for each shoot
+  ##field.est.avg = weighted mean of each category for targeted leaves of 5 shoots/quad from field ,i.e. (#absent*0 + #trace*1 + #low*2 + #mid*3)/(#shoots per quad)
+
+#wb.quad.field (data set for comparison within field metrics)
+  ##WD.field.qual = Categorical wasting disease lesion percent cover estimate by scuba diver within 0.5x0.5m2 quadrat
+  ##absent, trace, low, mid = The number of shoots (out of the 5 targeted shoots per quadrat that were scored in these lesion percent cover categories)
+
+```
+
+##Field qual vs. wasting index
+```{r}
+bargraph.CI(x.factor = WD.field.qual,
+            response = WI,
+            data = wb.quad,
+            ylim = c(0,20),
+            main = "Quad percent cover",
+            ylab = "Wasting Index", legend = F)
+```
+
+##Field 5-shoot targetted leaf (oldest) vs wasting index
+```{r}
+plot(WI ~ field.est.avg, data = wb.quad)
+```
+
+##Field qual vs. field target
+```{r}
+table.wb.quad.field <- matrix(c(2,8,0,0,17,23,17,3,8,18,22,5),ncol=4,byrow=3)
+colnames(table.wb.quad.field) <- c("absent","trace","low", "mid")
+rownames(table.wb.quad.field) <- c("absent","trace","low")
+table.wb.quad.field <- as.table(table.wb.quad.field)
+table.wb.quad.field
+mosaicplot(table.wb.quad.field, main = "", xlab = "Quad Percent Cover", ylab = "5 Shoot Targetted Leaf % Cover", col = T)
+```
+
+##Wasting Index vs. Whole shoot Wasting Index
+```{r}
+plot(WI ~ WSWI, data = wb.quad)
+```
+
+
+
 
