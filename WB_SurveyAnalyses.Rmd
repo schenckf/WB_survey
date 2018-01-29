@@ -521,9 +521,26 @@ depth.quad<- wb.quad %>%
   dplyr::select(depth, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low)%>%
   group_by(depth)%>%
   summarize(absent=sum(WD.field.qual.absent), trace=sum(WD.field.qual.trace), low=sum(WD.field.qual.low))
+ 
   
+mosaicplot(depth.quad, main = "Field Qual vs depth", xlab= "Depth", ylab= "Quad percent cover", col=T) 
+
   #use table stuff starting line 500 to make mosaicplot. same principle as this code to do by quadrat by season
+
+season.quad <- wb.quad%>%
+  dplyr::select(month.collected,WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low)%>%
+  group_by(month.collected)%>%
+  summarize(absent=sum(WD.field.qual.absent), trace=sum(WD.field.qual.trace), low=sum(WD.field.qual.low))
+
+table.wb.season.quad <- matrix(c(0, 6, 18, 6, 18, 0), ncol = 3, byrow = 2)
+  colnames(table.wb.season.quad) <- c("absent", "trace", "low")
+  rownames(table.wb.season.quad) <- c("july", "october")
+  table.wb.season.quad <- as.table(table.wb.season.quad)
+table.wb.season.quad
+
+mosaicplot(season.quad, main = "Month Collected vs Quad Percent Cover", xlab = "Quad Percent Cover", ylab = "Month Collected", col=T)
+  
   
 ```
-  
+
 
