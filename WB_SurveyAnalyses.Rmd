@@ -495,7 +495,7 @@ bargraph.CI(x.factor = WD.field.qual,
 plot(WI ~ field.est.avg, data = wb.quad)
 ```
 
-##Field qual vs. field target
+##Field qual vs. field target (5 shoot)
 ```{r}
 table.wb.quad.field <- matrix(c(2,8,0,0,17,23,17,3,8,18,22,5),ncol=4,byrow=3)
 colnames(table.wb.quad.field) <- c("absent","trace","low", "mid")
@@ -508,25 +508,32 @@ mosaicplot(table.wb.quad.field, main = "", xlab = "Quad Percent Cover", ylab = "
 ##Wasting Index vs. Whole shoot Wasting Index
 ```{r}
 plot(WI ~ WSWI, data = wb.quad)
-```
 
-
-```{r}
+#WI vs depth and season 
 bargraph.CI(x.factor=depth,response = WI, group = month.collected, data=wb.quad, main= "WI vs. Depth and Season", legend=T)
 ```
 
-  
+##quad.percent.cover by depth
 ```{r}
 depth.quad<- wb.quad %>%
   dplyr::select(depth, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low)%>%
   group_by(depth)%>%
   summarize(absent=sum(WD.field.qual.absent), trace=sum(WD.field.qual.trace), low=sum(WD.field.qual.low))
  
-  
-mosaicplot(depth.quad, main = "Field Qual vs depth", xlab= "Depth", ylab= "Quad percent cover", col=T) 
+  table.wb.depth.quad <- matrix(c(2, 11, 11, 4, 13, 7), ncol = 3, byrow = 2)
+  colnames(table.wb.depth.quad) <- c("absent", "trace", "low")
+  rownames(table.wb.depth.quad) <- c("deep", "shallow")
+  table.wb.depth.quad <- as.table(table.wb.depth.quad)
+table.wb.depth.quad
 
-  #use table stuff starting line 500 to make mosaicplot. same principle as this code to do by quadrat by season
 
+
+mosaicplot(table.wb.depth.quad, main = "Field Qual vs depth", xlab= "Depth", ylab= "Quad percent cover", col=T) 
+
+```
+
+##Quad percent cover by season
+```{r}
 season.quad <- wb.quad%>%
   dplyr::select(month.collected,WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low)%>%
   group_by(month.collected)%>%
@@ -538,9 +545,85 @@ table.wb.season.quad <- matrix(c(0, 6, 18, 6, 18, 0), ncol = 3, byrow = 2)
   table.wb.season.quad <- as.table(table.wb.season.quad)
 table.wb.season.quad
 
-mosaicplot(season.quad, main = "Month Collected vs Quad Percent Cover", xlab = "Quad Percent Cover", ylab = "Month Collected", col=T)
+mosaicplot(table.wb.season.quad, main = "Month Collected vs Quad Percent Cover", xlab = "Month Collected", ylab = "Quad Percent Cover", col=T)
   
+#see if you can add legend
   
 ```
 
+##WI vs depth x season
+```{r}
+bargraph.CI(x.factor = depth,
+            response = WI,
+            group = month.collected,
+            data = wb.quad,
+            ylim = c(0,20),
+            main = "WI vs depth and season",
+            ylab = "Wasting Index", legend = T)
+```
+
+##WSWI vs depth x season
+```{r}
+bargraph.CI(x.factor=depth,
+            response= WSWI,
+            group=month.collected,
+            data=wb.quad,
+            ylim= c(0,10),
+            main= "WSWI cs depth and season",
+            ylab= "Whole Shoot Wasting Index", legend= T)
+```
+
+##Targeted leaf percent cover vs depth x season
+```{r}
+bargraph.CI(x.factor=depth,
+            response= L3.lpc,
+            group=month.collected,
+            data=wb.quad,
+            ylim= c(0,10),
+            main= "3rd Leaf % Cover vs depth and season",
+           ylab= "3rd Leaf % Cover", legend= T )
+```
+
+##WSWI vs Quad % cover
+```{r}
+bargraph.CI(x.factor=WD.field.qual,
+            response= WSWI,
+            data=wb.quad,
+            ylim= c(0,10),
+            main= "Whole Shoot WI vs. Quad % Cover",
+           ylab= "WSWI", legend= T )
+```
+
+##WSWI vs 5 shoot (field target)
+```{r}
+plot(WSWI ~ field.est.avg, data = wb.quad)
+```
+
+##3rd leaf % cover vs quad % cover
+```{r}
+bargraph.CI(x.factor=WD.field.qual,
+            response= L3.lpc,
+            data=wb.quad,
+            ylim= c(0,10),
+            main= "3rd leaf % cover vs quad % cover",
+           ylab= "3rd leaf % cover", legend= T )
+```
+
+##3rd leaf % cover vs 5 shoot
+```{r}
+plot(L3.lpc ~ field.est.avg, data=wb.quad, main= "3rd leaf % cover vs field estimate ave", ylab= "3rd leaf % cover",
+     xlab= "field estimate avg")
+```
+
+##3rd leaf % cover vs WI
+```{r}
+plot(L3.lpc ~ WI, data=wb.quad, main= "3rd leaf % cover vs wasting index", ylab= "3rd leaf % cover",
+     xlab= "WI")
+```
+
+##3rd leaf % cover vs WSWI
+```{r}
+plot(L3.lpc ~ WSWI, data=wb.quad, main= "3rd leaf % cover vs whole shoot WI", ylab= "3rd leaf % cover",
+     xlab= "WSWI")
+```
 
