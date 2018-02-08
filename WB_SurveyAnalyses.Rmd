@@ -427,11 +427,11 @@ curve(predict(model, data.frame(zm.veg.density0.0625m2 = x), type = "resp"), add
 
 #METHODS COMPARISON
 ##DATA Organization
+#ALL GRAPHS EXCLUDING MID
+
 ```{r}
 wb.quad <- wb %>%
-  filter(depth != "mid") %>%
-  dplyr::select(month.collected, year.collected, depth, quadrat.id, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, L1.lesion.area.cm2, L2.lesion.area.cm2, L3.lesion.area.cm2, L4.lesion.area.cm2, L1.area.cm2, L2.area.cm2, L3.area.cm2, L4.area.cm2, no.leaves)
-
+    dplyr::select(month.collected, year.collected, depth, quadrat.id, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, L1.lesion.area.cm2, L2.lesion.area.cm2, L3.lesion.area.cm2, L4.lesion.area.cm2, L1.area.cm2, L2.area.cm2, L3.area.cm2, L4.area.cm2, no.leaves)
 wb.quad$WD.field.qual <- NA
 for (n in 1:48) {
   if (wb.quad$WD.field.qual.absent[n] == 1)
@@ -624,6 +624,213 @@ plot(L3.lpc ~ WI, data=wb.quad, main= "3rd leaf % cover vs wasting index", ylab=
 ##3rd leaf % cover vs WSWI
 ```{r}
 plot(L3.lpc ~ WSWI, data=wb.quad, main= "3rd leaf % cover vs whole shoot WI", ylab= "3rd leaf % cover",
+     xlab= "WSWI")
+```
+
+  
+
+#ALL GRAPHS INCLUDING MID
+```{r}
+wb.quad2 <- wb %>%
+  
+  dplyr::select(month.collected, year.collected, depth, quadrat.id, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, L1.lesion.area.cm2, L2.lesion.area.cm2, L3.lesion.area.cm2, L4.lesion.area.cm2, L1.area.cm2, L2.area.cm2, L3.area.cm2, L4.area.cm2, no.leaves)
+
+wb.quad2$WD.field.qual <- NA
+for (n in 1:72) {
+  if (wb.quad2$WD.field.qual.absent[n] == 1)
+  {wb.quad2$WD.field.qual[n] = "absent"
+  } else if (wb.quad2$WD.field.qual.trace[n] == 1) {
+    wb.quad2$WD.field.qual[n] = "trace"
+  } else { wb.quad2$WD.field.qual[n] = "low"
+    }
+}
+wb.quad2$WD.field.qual <- as.factor(wb.quad2$WD.field.qual)
+
+str(wb.quad2)
+
+wb.quad2$L1.lpc <- (wb.quad2$L1.lesion.area.cm2 / wb.quad2$L1.area.cm2)*100
+wb.quad2$L2.lpc <- (wb.quad2$L2.lesion.area.cm2/wb.quad2$L2.area.cm2)*100
+wb.quad2$L3.lpc <- (wb.quad2$L3.lesion.area.cm2/wb.quad2$L3.area.cm2)*100
+wb.quad2$L4.lpc <- (wb.quad2$L4.lesion.area.cm2/wb.quad2$L4.area.cm2)*100
+
+wb.quad2$WI <- NA
+for (n in 1:72) {
+  wb.quad2$WI[n] = max(wb.quad2$L1.lpc[n], wb.quad2$L2.lpc[n], wb.quad2$L3.lpc[n], wb.quad2$L4.lpc[n], na.rm = T)
+}
+
+wb.quad2$WSWI <- NA
+for (n in 1:72) {
+ wb.quad2$WSWI[n] = sum(wb.quad2$L1.lpc[n], wb.quad2$L2.lpc[n], wb.quad2$L3.lpc[n], wb.quad2$L4.lpc[n], na.rm = T) / wb.quad2$no.leaves[n]
+}
+
+wb.quad2$field.est.avg <- (wb.quad2$WD.field.est.absent*0 + wb.quad2$WD.field.est.trace*1 + wb.quad2$WD.field.est.low*2 + wb.quad2$WD.field.est.mid*3)/(wb.quad2$WD.field.est.absent + wb.quad2$WD.field.est.trace + wb.quad2$WD.field.est.low + wb.quad2$WD.field.est.mid)
+
+wb.quad.field2 <- wb.quad2 %>%
+  dplyr::select(WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, WD.field.qual) %>%
+  filter(WD.field.est.absent != "NA") %>%
+  group_by(WD.field.qual) %>%
+  summarize(absent = sum(WD.field.est.absent), trace = sum(WD.field.est.trace), low = sum(WD.field.est.low), mid = sum(WD.field.est.mid))
+
+#wb.quad (data set with all metrics are at the quadrat level)
+  ##WD.field.qual = Categorical wasting disease lesion percent cover estimate by scuba diver within 0.5x0.5m2 quadrat
+  ##L1.lpc-L4.lpc = lesion percent cover {(lesion area - leaf area)/100} of each leaf for each shoot
+  ##WI = wasting index sensu Burdick 1993, i.e. lesion percent cover of most diseased leaf of each shoot
+  ##WSWI = whole shoot wasting index sensu Burdick 1993, i.e. average of lesion percent cover for all leaves for each shoot
+  ##field.est.avg = weighted mean of each category for targeted leaves of 5 shoots/quad from field ,i.e. (#absent*0 + #trace*1 + #low*2 + #mid*3)/(#shoots per quad)
+
+#wb.quad.field (data set for comparison within field metrics)
+  ##WD.field.qual = Categorical wasting disease lesion percent cover estimate by scuba diver within 0.5x0.5m2 quadrat
+  ##absent, trace, low, mid = The number of shoots (out of the 5 targeted shoots per quadrat that were scored in these lesion percent cover categories)
+
+```
+
+##Field qual vs. whole shoot wasting index
+```{r}
+bargraph.CI(x.factor = WD.field.qual,
+            response = WSWI,
+            data = wb.quad2,
+            ylim = c(0,50),
+            main = "WSWI vs Quad percent cover",
+            ylab = "Whole Shoot Wasting Index", legend = F)
+
+
+```
+
+##Field 5-shoot targetted leaf (oldest) vs wasting index
+```{r}
+plot(WI ~ field.est.avg, data = wb.quad2)
+```
+
+##Field qual vs. field target (5 shoot)
+```{r}
+#from wb.quad.field2 data frame 
+table.wb.quad.field <- matrix(c(2,8,0,0,11,24,28,5,20,30,20,5),ncol=4,byrow=3)
+colnames(table.wb.quad.field) <- c("absent","trace","low", "mid")
+rownames(table.wb.quad.field) <- c("absent","trace","low")
+table.wb.quad.field <- as.table(table.wb.quad.field)
+table.wb.quad.field
+mosaicplot(table.wb.quad.field, main = "", xlab = "Quad Percent Cover", ylab = "5 Shoot Targetted Leaf % Cover", col = T)
+```
+
+##Wasting Index vs. Whole shoot Wasting Index
+```{r}
+plot(WI ~ WSWI, data = wb.quad2)
+
+#WI vs depth and season 
+bargraph.CI(x.factor=depth, response = WI, group = month.collected, data=wb.quad2, main= "WI vs. Depth and Season", legend=T)
+```
+
+##quad.percent.cover by depth
+```{r}
+depth.quad2<- wb.quad2 %>%
+  dplyr::select(depth, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low)%>%
+  group_by(depth)%>%
+  summarize(absent=sum(WD.field.qual.absent), trace=sum(WD.field.qual.trace), low=sum(WD.field.qual.low))
+ 
+  table.wb.depth.quad <- matrix(c(2, 11, 11, 3, 14, 7, 4, 13, 7), ncol = 3, byrow = 3)
+  colnames(table.wb.depth.quad) <- c("absent", "trace", "low")
+  rownames(table.wb.depth.quad) <- c("deep", "shallow", "mid")
+  table.wb.depth.quad <- as.table(table.wb.depth.quad)
+table.wb.depth.quad
+
+
+
+mosaicplot(table.wb.depth.quad, main = "Field Qual vs depth", xlab= "Depth", ylab= "Quad percent cover", col=T) 
+
+```
+
+##Quad percent cover by season
+```{r}
+season.quad2 <- wb.quad2%>%
+  dplyr::select(month.collected,WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low)%>%
+  group_by(month.collected)%>%
+  summarize(absent=sum(WD.field.qual.absent), trace=sum(WD.field.qual.trace), low=sum(WD.field.qual.low))
+
+table.wb.season.quad <- matrix(c(0, 11, 25, 9, 27, 0), ncol = 3, byrow = 2)
+  colnames(table.wb.season.quad) <- c("absent", "trace", "low")
+  rownames(table.wb.season.quad) <- c("july", "october")
+  table.wb.season.quad <- as.table(table.wb.season.quad)
+table.wb.season.quad
+
+mosaicplot(table.wb.season.quad, main = "Month Collected vs Quad Percent Cover", xlab = "Month Collected", ylab = "Quad Percent Cover", col=T)
+  
+#see if you can add legend
+  
+```
+
+##WI vs depth x season
+```{r}
+bargraph.CI(x.factor = depth,
+            response = WI,
+            group = month.collected,
+            data = wb.quad2,
+            ylim = c(0,20),
+            main = "WI vs depth and season",
+            ylab = "Wasting Index", legend = T)
+```
+
+##WSWI vs depth x season
+```{r}
+bargraph.CI(x.factor=depth,
+            response= WSWI,
+            group=month.collected,
+            data=wb.quad2,
+            ylim= c(0,10),
+            main= "WSWI vs depth and season",
+            ylab= "Whole Shoot Wasting Index", legend= T)
+```
+
+##Targeted leaf percent cover vs depth x season
+```{r}
+bargraph.CI(x.factor=depth,
+            response= L3.lpc,
+            group= month.collected,
+            data= wb.quad2,
+            ylim= c(0,20),
+            main= "3rd Leaf % Cover vs depth and season",
+           ylab= "3rd Leaf % Cover", legend= T )
+```
+
+##WSWI vs Quad % cover
+```{r}
+bargraph.CI(x.factor=WD.field.qual,
+            response= WSWI,
+            data=wb.quad2,
+            ylim= c(0,10),
+            main= "Whole Shoot WI vs. Quad % Cover",
+           ylab= "WSWI", legend= T )
+```
+
+##WSWI vs 5 shoot (field target)
+```{r}
+plot(WSWI ~ field.est.avg, data = wb.quad2)
+```
+
+##3rd leaf % cover vs quad % cover
+```{r}
+bargraph.CI(x.factor=WD.field.qual,
+            response= L3.lpc,
+            data=wb.quad2,
+            ylim= c(0,10),
+            main= "3rd leaf % cover vs quad % cover",
+           ylab= "3rd leaf % cover", legend= T )
+```
+
+##3rd leaf % cover vs 5 shoot
+```{r}
+plot(L3.lpc ~ field.est.avg, data=wb.quad2, main= "3rd leaf % cover vs field estimate ave", ylab= "3rd leaf % cover",
+     xlab= "field estimate avg")
+```
+
+##3rd leaf % cover vs WI
+```{r}
+plot(L3.lpc ~ WI, data=wb.quad2, main= "3rd leaf % cover vs wasting index", ylab= "3rd leaf % cover",
+     xlab= "WI")
+```
+
+##3rd leaf % cover vs WSWI
+```{r}
+plot(L3.lpc ~ WSWI, data=wb.quad2, main= "3rd leaf % cover vs whole shoot WI", ylab= "3rd leaf % cover",
      xlab= "WSWI")
 ```
 
