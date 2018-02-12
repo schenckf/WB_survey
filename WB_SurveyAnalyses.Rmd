@@ -431,7 +431,7 @@ curve(predict(model, data.frame(zm.veg.density0.0625m2 = x), type = "resp"), add
 
 ```{r}
 wb.quad <- wb %>%
-    dplyr::select(month.collected, year.collected, depth, quadrat.id, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, L1.lesion.area.cm2, L2.lesion.area.cm2, L3.lesion.area.cm2, L4.lesion.area.cm2, L1.area.cm2, L2.area.cm2, L3.area.cm2, L4.area.cm2, no.leaves)
+    dplyr::select(month.collected, year.collected, depth, quadrat.id, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, L1.lesion.area.cm2, L2.lesion.area.cm2, L3.lesion.area.cm2, L4.lesion.area.cm2, L1.area.cm2, L2.area.cm2, L3.area.cm2, L4.area.cm2, no.leaves, L1.OS, L2.OS, L3.OS, L4.OS)
 wb.quad$WD.field.qual <- NA
 for (n in 1:48) {
   if (wb.quad$WD.field.qual.absent[n] == 1)
@@ -502,7 +502,7 @@ colnames(table.wb.quad.field) <- c("absent","trace","low", "mid")
 rownames(table.wb.quad.field) <- c("absent","trace","low")
 table.wb.quad.field <- as.table(table.wb.quad.field)
 table.wb.quad.field
-mosaicplot(table.wb.quad.field, main = "", xlab = "Quad Percent Cover", ylab = "5 Shoot Targetted Leaf % Cover", col = T)
+mosaicplot(table.wb.quad.field, main = "", xlab = "Quad Percent Cover", ylab = "5 Shoot Targetted Leaf % Cover", col = T) 
 ```
 
 ##Wasting Index vs. Whole shoot Wasting Index
@@ -557,7 +557,7 @@ bargraph.CI(x.factor = depth,
             response = WI,
             group = month.collected,
             data = wb.quad,
-            ylim = c(0,20),
+            ylim = c(0,10),
             main = "WI vs depth and season",
             ylab = "Wasting Index", legend = T)
 ```
@@ -633,7 +633,7 @@ plot(L3.lpc ~ WSWI, data=wb.quad, main= "3rd leaf % cover vs whole shoot WI", yl
 ```{r}
 wb.quad2 <- wb %>%
   
-  dplyr::select(month.collected, year.collected, depth, quadrat.id, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, L1.lesion.area.cm2, L2.lesion.area.cm2, L3.lesion.area.cm2, L4.lesion.area.cm2, L1.area.cm2, L2.area.cm2, L3.area.cm2, L4.area.cm2, no.leaves)
+  dplyr::select(month.collected, year.collected, depth, quadrat.id, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, L1.lesion.area.cm2, L2.lesion.area.cm2, L3.lesion.area.cm2, L4.lesion.area.cm2, L1.area.cm2, L2.area.cm2, L3.area.cm2, L4.area.cm2, no.leaves, L1.OS, L2.OS, L3.OS, L4.OS)
 
 wb.quad2$WD.field.qual <- NA
 for (n in 1:72) {
@@ -671,6 +671,17 @@ wb.quad.field2 <- wb.quad2 %>%
   group_by(WD.field.qual) %>%
   summarize(absent = sum(WD.field.est.absent), trace = sum(WD.field.est.trace), low = sum(WD.field.est.low), mid = sum(WD.field.est.mid))
 
+wb.OS <- wb.quad2 %>%
+  dplyr:: select(L4.OS, L3.OS, L2.OS, L1.OS, WD.field.est.trace, WD.field.est.low,WD.field.est.mid, WD.field.est.absent, WD.field.qual)%>%
+  filter(L4.OS != "NA") %>% 
+  filter(L3.OS  != "NA") %>%
+  filter(L2.OS != "NA") %>% 
+  filter(L1.OS !="NA") %>%
+filter(WD.field.est.absent != "NA") %>%
+  group_by(L4.OS) %>%
+  summarize(absent = sum(WD.field.est.absent), trace = sum(WD.field.est.trace), low = sum(WD.field.est.low), mid = sum(WD.field.est.mid))
+  
+
 #wb.quad (data set with all metrics are at the quadrat level)
   ##WD.field.qual = Categorical wasting disease lesion percent cover estimate by scuba diver within 0.5x0.5m2 quadrat
   ##L1.lpc-L4.lpc = lesion percent cover {(lesion area - leaf area)/100} of each leaf for each shoot
@@ -681,7 +692,7 @@ wb.quad.field2 <- wb.quad2 %>%
 #wb.quad.field (data set for comparison within field metrics)
   ##WD.field.qual = Categorical wasting disease lesion percent cover estimate by scuba diver within 0.5x0.5m2 quadrat
   ##absent, trace, low, mid = The number of shoots (out of the 5 targeted shoots per quadrat that were scored in these lesion percent cover categories)
-
+#wb.OS (formatting outside sheath to exclude NAs)
 ```
 
 ##Field qual vs. whole shoot wasting index
@@ -786,7 +797,7 @@ bargraph.CI(x.factor=depth,
             response= L3.lpc,
             group= month.collected,
             data= wb.quad2,
-            ylim= c(0,20),
+            ylim= c(0,10),
             main= "3rd Leaf % Cover vs depth and season",
            ylab= "3rd Leaf % Cover", legend= T )
 ```
@@ -833,4 +844,89 @@ plot(L3.lpc ~ WI, data=wb.quad2, main= "3rd leaf % cover vs wasting index", ylab
 plot(L3.lpc ~ WSWI, data=wb.quad2, main= "3rd leaf % cover vs whole shoot WI", ylab= "3rd leaf % cover",
      xlab= "WSWI")
 ```
+
+##L4 OS vs WI
+```{r}
+bargraph.CI(x.factor=L4.OS,
+            response= WI,
+            data= wb.quad2,
+            ylim= c(0,50),
+            main= "October Wasting Index and 4th Leaf OS",
+            xlab= "Leaf 4 Outside Sheath",
+            ylab= "Wasting Index",
+             legend= T )
+```
+
+##L3 OS vs WI
+```{r}
+bargraph.CI(x.factor=L3.OS,
+            response= WI,
+            data= wb.quad2,
+            ylim= c(0,50),
+            main= "October Wasting Index and 3rd Leaf OS",
+            xlab= "Leaf 3 Outside Sheath",
+            ylab= "Wasting Index",
+             legend= T )
+```
+
+##L4 OS vs WSWI
+```{r}
+bargraph.CI(x.factor=L4.OS,
+            response= WSWI,
+            data= wb.quad2,
+            ylim= c(0,50),
+            main= "October Whole Shoot WI and 4th Leaf OS",
+            xlab= "Leaf 4 Outside Sheath",
+            ylab= "Whole Shoot Wasting Index",
+             legend= T )
+```
+
+##L3 OS vs WSWI
+```{r}
+bargraph.CI(x.factor=L4.OS,
+            response= WSWI,
+            data= wb.quad2,
+            ylim= c(0,50),
+            main= "October Whole Shoot WI and 4th Leaf OS",
+            xlab= "Leaf 4 Outside Sheath",
+            ylab= "Whole Shoot Wasting Index",
+             legend= T )
+```
+
+##L4 OS vs field est avg
+```{r}
+bargraph.CI(x.factor=L4.OS,
+            response= field.est.avg,
+            data= wb.quad2,
+            ylim= c(0,10),
+            main= "October 5 shoot estimate and 4th Leaf OS",
+            xlab= "Leaf 4 Outside Sheath",
+            ylab= "Field estimate average",
+             legend= T )
+```
+
+##L3 OS vs field est avg
+```{r}
+bargraph.CI(x.factor=L4.OS,
+            response= field.est.avg,
+            data= wb.quad2,
+            ylim= c(0,10),
+            main= "October 5 Shoot Estimate and 3rd Leaf OS",
+            xlab= "Leaf 4 Outside Sheath",
+            ylab= "Field estimate average",
+             legend= T )
+```
+
+##L4 OS vs quad % cover
+```{r}
+ table.OS.quad <- matrix(c( 1, 6, 3, 0, 5, 5, 4, 1), ncol = 4, byrow = 2)
+   colnames(table.OS.quad) <- c("absent", "trace", "low", "mid")
+   rownames(table.OS.quad) <- c("no", "yes")
+    table.OS.quad <- as.table(table.OS.quad)
+            table.OS.quad
+
+mosaicplot(table.OS.quad, main = "October: 4th Leaf Outside Shoot and Quad Percent Cover", xlab = "4th Leaf Outside Sheath", ylab = "Quad Percent Cover", col=T)
+
+```
+
 
