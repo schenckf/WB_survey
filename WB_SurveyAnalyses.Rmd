@@ -244,64 +244,64 @@ pl <- ordiellipse(comm.mds, regions, kind = "se", conf = 0.95, lwd = 2,
 ```{r}
 #PCA
 ###DATA ORGANIZATION
-wb.nmds$WD.field.est.absent.p <- 1-wb.depth$wd.prevalence
-wb.nmds$total.count <- (wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.trace + wb.depth$WD.field.est.low + wb.depth$WD.field.est.mid + wb.depth$WD.field.est.high)
+#wb.nmds$WD.field.est.absent.p <- 1-wb.depth$wd.prevalence
+#wb.nmds$total.count <- (wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.trace + wb.depth$WD.field.est.low + wb.depth$WD.field.est.mid + wb.depth$WD.field.est.high)
 
 
-wb.pca <- wb.depth %>%
-  filter(total.count != "NA")
-wb.pca <- data.frame(wb.pca$month.collected, wb.pca$depth, wb.pca$WD.field.est.absent, wb.pca$WD.field.est.trace, wb.pca$WD.field.est.low, wb.pca$WD.field.est.mid)
+#wb.pca <- wb.depth %>%
+ # filter(total.count != "NA")
+#wb.pca <- data.frame(wb.pca$month.collected, wb.pca$depth, wb.pca$WD.field.est.absent, wb.pca$WD.field.est.trace, wb.pca$WD.field.est.low, wb.pca$WD.field.est.mid)
 
-colnames(wb.pca) <- c("month", "depth", "absent", "trace", "low", "mid")
+#colnames(wb.pca) <- c("month", "depth", "absent", "trace", "low", "mid")
 
-PCA.res <- prcomp(wb.pca[,3:6], scale. = T)
+#PCA.res <- prcomp(wb.pca[,3:6], scale. = T)
 
-summary(PCA.res) #the proportion of variance explained by each component
+#summary(PCA.res) #the proportion of variance explained by each component
 
 ##FIG
-par(las =1, mgp = c(2.5, 0.2, 0), mfrow = c(1,1), mar = c(3.75,4,0.5,0.375), tck = 0.01)
+#par(las =1, mgp = c(2.5, 0.2, 0), mfrow = c(1,1), mar = c(3.75,4,0.5,0.375), tck = 0.01)
 #par(oma = c(2, 1, 1, 1))
 
-screeplot(PCA.res, bstick = TRUE, bst.col = "black", ylab = "Eigenvalue", legend = "", ptype = "points", col = "white", main = "")
+#screeplot(PCA.res, bstick = TRUE, bst.col = "black", ylab = "Eigenvalue", legend = "", ptype = "points", col = "white", main = "")
 
-bstick(PCA.res) #broken stick values
+#bstick(PCA.res) #broken stick values
 
-bp.scree <- barplot(height = PCA.res$sdev^2, names.arg = c("PC1", "PC2", "PC3", "PC4"), space = 0.2, col = "white", ylim = c(0,4), ylab = "Eigenvalue")
-points(x = bp.scree, bstick(PCA.res),
-     pch = 1)
+#bp.scree <- barplot(height = PCA.res$sdev^2, names.arg = c("PC1", "PC2", "PC3", "PC4"), space = 0.2, col = "white", ylim = c(0,4), ylab = "Eigenvalue")
+#points(x = bp.scree, bstick(PCA.res),
+     #pch = 1)
 
-op <- par("usr")
+#op <- par("usr")
 
-PCA.res$rotation[,1:4] #how much each factor loads on each PCA
-PCA.res$sdev^2 #eigenvalue
+#PCA.res$rotation[,1:4] #how much each factor loads on each PCA
+#PCA.res$sdev^2 #eigenvalue
 
-biplot(PCA.res)
+#biplot(PCA.res)
 
-PCA.plot.data <- data.frame(PCA.res$x[,1:2])
-PCA.res
+#PCA.plot.data <- data.frame(PCA.res$x[,1:2])
+#PCA.res
 
-pca
+#pca
 
-str(wb.pca)
+#str(wb.pca)
 
-wb.pca$absent <- as.numeric(wb.pca$absent)
-wb.pca$trace <- as.numeric(wb.pca$trace)
-wb.pca$low <- as.numeric(wb.pca$low)
-wb.pca$mid <- as.numeric(wb.pca$mid)
+#wb.pca$absent <- as.numeric(wb.pca$absent)
+#wb.pca$trace <- as.numeric(wb.pca$trace)
+#wb.pca$low <- as.numeric(wb.pca$low)
+#wb.pca$mid <- as.numeric(wb.pca$mid)
 
-pca <- prcomp(wb.pca[,unlist(lapply(wb.pca, FUN=class))=="numeric"])
-plot(PCA.res$x[,1:2], pch=16, col=as.numeric(wb.pca[,"month"]), main="Color annotation") # 2 first principal components
-legend("bottomleft", pch=16, col=unique(as.numeric(wb.pca[,"month"])), legend=unique(wb.pca[,"month"]))
-
-plot(PCA.res$x[,1:2], pch=16, col=as.numeric(wb.pca[,"depth"]), main="Color annotation") # 2 first principal components
-legend("bottomleft", pch=16, col=unique(as.numeric(wb.pca[,"depth"])), legend=unique(wb.pca[,"depth"]))
-
-PCA.plot.data$PC1.jitter <- jitter(PCA.plot.data$PC1, 50)
-PCA.plot.data$PC2.jitter <- jitter(PCA.plot.data$PC2, 50)
-
-plot(PC2.jitter ~ PC1.jitter, pch=as.numeric(wb.pca[,"depth"]), col=as.numeric(wb.pca[,"month"]), main="", xlim=c(-3,3), data = PCA.plot.data) # 2 first principal components
-legend("bottomleft", pch = 18, col=unique(as.numeric(wb.pca[,"month"])), legend=unique(wb.pca[,"month"]))
-legend("bottomright", pch=unique(as.numeric(wb.pca[,"depth"])), legend=unique(wb.pca[,"depth"]))
+# pca <- prcomp(wb.pca[,unlist(lapply(wb.pca, FUN=class))=="numeric"])
+# plot(PCA.res$x[,1:2], pch=16, col=as.numeric(wb.pca[,"month"]), main="Color annotation") # 2 first principal components
+# legend("bottomleft", pch=16, col=unique(as.numeric(wb.pca[,"month"])), legend=unique(wb.pca[,"month"]))
+# 
+# plot(PCA.res$x[,1:2], pch=16, col=as.numeric(wb.pca[,"depth"]), main="Color annotation") # 2 first principal components
+# legend("bottomleft", pch=16, col=unique(as.numeric(wb.pca[,"depth"])), legend=unique(wb.pca[,"depth"]))
+# 
+# PCA.plot.data$PC1.jitter <- jitter(PCA.plot.data$PC1, 50)
+# PCA.plot.data$PC2.jitter <- jitter(PCA.plot.data$PC2, 50)
+# 
+# plot(PC2.jitter ~ PC1.jitter, pch=as.numeric(wb.pca[,"depth"]), col=as.numeric(wb.pca[,"month"]), main="", xlim=c(-3,3), data = PCA.plot.data) # 2 first principal components
+# legend("bottomleft", pch = 18, col=unique(as.numeric(wb.pca[,"month"])), legend=unique(wb.pca[,"month"]))
+# legend("bottomright", pch=unique(as.numeric(wb.pca[,"depth"])), legend=unique(wb.pca[,"depth"]))
 ```
 
 ###Prevalence by Canopy Length and shoot density
