@@ -44,8 +44,8 @@ wb.5shoot.binom <- read.csv("WastingDiseasePA_31OCT2017.csv", header = T)
 #prevalence (presence vs absence)
 bargraph.CI(x.factor = depth,
             response = wd.prevalence,
-            #group = depth,
-            data = filter(wb, depth != "mid"),
+            group = month.collected,
+            data = wb,
             ylim = c(0,1.1),
             main = "5-shoot Prevalence",
             ylab = "proportion of shoots infected per plot", legend = T)
