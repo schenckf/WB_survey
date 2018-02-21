@@ -427,13 +427,12 @@ curve(predict(model, data.frame(zm.veg.density0.0625m2 = x), type = "resp"), add
 
 #METHODS COMPARISON
 ##DATA Organization
-#ALL GRAPHS EXCLUDING MID
 
 ```{r}
 wb.quad <- wb %>%
     dplyr::select(month.collected, year.collected, depth, quadrat.id, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, L1.lesion.area.cm2, L2.lesion.area.cm2, L3.lesion.area.cm2, L4.lesion.area.cm2, L1.area.cm2, L2.area.cm2, L3.area.cm2, L4.area.cm2, no.leaves, L1.OS, L2.OS, L3.OS, L4.OS)
 wb.quad$WD.field.qual <- NA
-for (n in 1:48) {
+for (n in 1:72) {
   if (wb.quad$WD.field.qual.absent[n] == 1)
   {wb.quad$WD.field.qual[n] = "absent"
   } else if (wb.quad$WD.field.qual.trace[n] == 1) {
@@ -444,17 +443,50 @@ for (n in 1:48) {
 
 str(wb.quad)
 
+for (n in 1:72) { #removing lesion area measurements from 3rd leaves that were outside sheath
+  if (wb.quad$L3.OS[n] == 1)
+    {wb.quad$L3.lesion.area.cm2[n] = NA
+  } else {wb.quad$L3.lesion.area.cm2[n] <- wb.quad$L3.lesion.area.cm2[n]}
+}
+
+for (n in 1:72) { #removing lesion area measurements from 4th leaves that were outside sheath
+  if (wb.quad$L4.OS[n] == 1)
+    {wb.quad$L4.lesion.area.cm2[n] = NA
+  } else {wb.quad$L4.lesion.area.cm2[n] <- wb.quad$L4.lesion.area.cm2[n]}
+}
+
+
 wb.quad$L1.lpc <- (wb.quad$L1.lesion.area.cm2 / wb.quad$L1.area.cm2)*100
 wb.quad$L2.lpc <- (wb.quad$L2.lesion.area.cm2/wb.quad$L2.area.cm2)*100
 wb.quad$L3.lpc <- (wb.quad$L3.lesion.area.cm2/wb.quad$L3.area.cm2)*100
 wb.quad$L4.lpc <- (wb.quad$L4.lesion.area.cm2/wb.quad$L4.area.cm2)*100
 
-wb.quad$WI <- NA
-for (n in 1:48) {
+for (n in 1:72) { #excluding lesions less than or equal to 0.1% of leaf as 0 because cannot tell if these are disease related
+  if (wb.quad$L1.lpc[n] > 0.1)
+  {wb.quad$L1.lpc[n] == wb.quad$L1.lpc[n]}
+  else {wb.quad$L1.lpc[n] = 0}
+}
+
+for (n in 1:72) { #excluding lesions less than or equal to 0.1% of leaf as 0 because cannot tell if these are disease related
+  if (wb.quad$L2.lpc[n] > 0.1)
+  {wb.quad$L2.lpc[n] == wb.quad$L2.lpc[n]}
+  else {wb.quad$L2.lpc[n] = 0}
+}
+
+wb.quad$L3.lpc <- ifelse(wb.quad$L3.lpc > 0.1 | is.na(wb.quad$L3.lpc), wb.quad$L3.lpc, 0)#excluding lesions less than or equal to 0.1% of leaf as 0 because cannot tell if these are disease related
+
+wb.quad$L4.lpc <- ifelse(wb.quad$L4.lpc > 0.1 | is.na(wb.quad$L4.lpc), wb.quad$L4.lpc, 0)#excluding lesions less than or equal to 0.1% of leaf as 0 because cannot tell if these are disease related
+
+#now all lesions less than 0.1 %cover have been excluded, creating a category for oldest leaf within sheath
+
+
+
+wb.quad$WI <- NA #Wasting index from Burdick et al. 1993
+for (n in 1:72) {
   wb.quad$WI[n] = max(wb.quad$L1.lpc[n], wb.quad$L2.lpc[n], wb.quad$L3.lpc[n], wb.quad$L4.lpc[n], na.rm = T)
 }
 
-wb.quad$WSWI <- NA
+wb.quad$WSWI <- NA #Wholoe shoot wasting index from Burdick et al. 1993
 for (n in 1:48) {
  wb.quad$WSWI[n] = sum(wb.quad$L1.lpc[n], wb.quad$L2.lpc[n], wb.quad$L3.lpc[n], wb.quad$L4.lpc[n], na.rm = T) / wb.quad$no.leaves[n]
 }
