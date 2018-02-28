@@ -15,6 +15,9 @@ library(ggplot2)
 library(tidyr)
 library(vegan)
 
+library(lme4)
+library(car)
+
 source("http://faraway.neu.edu/data/Rprofile")
 
 ```
@@ -44,8 +47,8 @@ wb.5shoot.binom <- read.csv("WastingDiseasePA_31OCT2017.csv", header = T)
 #prevalence (presence vs absence)
 bargraph.CI(x.factor = depth,
             response = wd.prevalence,
-            #group = depth,
-            data = filter(wb, depth != "mid"),
+            group = month.collected,
+            data = wb,
             ylim = c(0,1.1),
             main = "5-shoot Prevalence",
             ylab = "proportion of shoots infected per plot", legend = T)
@@ -108,7 +111,8 @@ wb.5shoot.binom.ds <- wb.5shoot.binom %>%
 
 
 ##binom model
-model <- glm(cbind(wd.present, wd.absent) ~ month.collected*depth, na.action = na.omit, data = wb.5shoot.binom.ds, family = binomial)
+model <- glmer(cbind(wd.present, wd.absent) ~ month.collected*depth + (1|month.collected/depth/quadrat.id), na.action = na.omit, data = wb.5shoot.binom.ds, family = binomial)
+Anova(model)
 anova(model, test = "LR") ### add quadrat as a random effect give each quadrat a unique identifier
 
 model <- lm(zm.veg.density ~ month.collected * depth, na.action = na.omit, data = wb.5shoot.binom.ds) #density analyses
@@ -119,7 +123,7 @@ model <- lm(wd.prevalence ~ depth * month.collected + month.collected/depth/quad
 anova(model)
 ```
 
-###NMDS
+###NMDS 5-shoot
 ```{r}
 ###DATA ORGANIZATION
 wb.nmds <- wb[!is.na(wb$WD.field.est.absent) & 
@@ -244,64 +248,64 @@ pl <- ordiellipse(comm.mds, regions, kind = "se", conf = 0.95, lwd = 2,
 ```{r}
 #PCA
 ###DATA ORGANIZATION
-wb.nmds$WD.field.est.absent.p <- 1-wb.depth$wd.prevalence
-wb.nmds$total.count <- (wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.trace + wb.depth$WD.field.est.low + wb.depth$WD.field.est.mid + wb.depth$WD.field.est.high)
+#wb.nmds$WD.field.est.absent.p <- 1-wb.depth$wd.prevalence
+#wb.nmds$total.count <- (wb.nmds$WD.field.est.absent + wb.nmds$WD.field.est.trace + wb.depth$WD.field.est.low + wb.depth$WD.field.est.mid + wb.depth$WD.field.est.high)
 
 
-wb.pca <- wb.depth %>%
-  filter(total.count != "NA")
-wb.pca <- data.frame(wb.pca$month.collected, wb.pca$depth, wb.pca$WD.field.est.absent, wb.pca$WD.field.est.trace, wb.pca$WD.field.est.low, wb.pca$WD.field.est.mid)
+#wb.pca <- wb.depth %>%
+ # filter(total.count != "NA")
+#wb.pca <- data.frame(wb.pca$month.collected, wb.pca$depth, wb.pca$WD.field.est.absent, wb.pca$WD.field.est.trace, wb.pca$WD.field.est.low, wb.pca$WD.field.est.mid)
 
-colnames(wb.pca) <- c("month", "depth", "absent", "trace", "low", "mid")
+#colnames(wb.pca) <- c("month", "depth", "absent", "trace", "low", "mid")
 
-PCA.res <- prcomp(wb.pca[,3:6], scale. = T)
+#PCA.res <- prcomp(wb.pca[,3:6], scale. = T)
 
-summary(PCA.res) #the proportion of variance explained by each component
+#summary(PCA.res) #the proportion of variance explained by each component
 
 ##FIG
-par(las =1, mgp = c(2.5, 0.2, 0), mfrow = c(1,1), mar = c(3.75,4,0.5,0.375), tck = 0.01)
+#par(las =1, mgp = c(2.5, 0.2, 0), mfrow = c(1,1), mar = c(3.75,4,0.5,0.375), tck = 0.01)
 #par(oma = c(2, 1, 1, 1))
 
-screeplot(PCA.res, bstick = TRUE, bst.col = "black", ylab = "Eigenvalue", legend = "", ptype = "points", col = "white", main = "")
+#screeplot(PCA.res, bstick = TRUE, bst.col = "black", ylab = "Eigenvalue", legend = "", ptype = "points", col = "white", main = "")
 
-bstick(PCA.res) #broken stick values
+#bstick(PCA.res) #broken stick values
 
-bp.scree <- barplot(height = PCA.res$sdev^2, names.arg = c("PC1", "PC2", "PC3", "PC4"), space = 0.2, col = "white", ylim = c(0,4), ylab = "Eigenvalue")
-points(x = bp.scree, bstick(PCA.res),
-     pch = 1)
+#bp.scree <- barplot(height = PCA.res$sdev^2, names.arg = c("PC1", "PC2", "PC3", "PC4"), space = 0.2, col = "white", ylim = c(0,4), ylab = "Eigenvalue")
+#points(x = bp.scree, bstick(PCA.res),
+     #pch = 1)
 
-op <- par("usr")
+#op <- par("usr")
 
-PCA.res$rotation[,1:4] #how much each factor loads on each PCA
-PCA.res$sdev^2 #eigenvalue
+#PCA.res$rotation[,1:4] #how much each factor loads on each PCA
+#PCA.res$sdev^2 #eigenvalue
 
-biplot(PCA.res)
+#biplot(PCA.res)
 
-PCA.plot.data <- data.frame(PCA.res$x[,1:2])
-PCA.res
+#PCA.plot.data <- data.frame(PCA.res$x[,1:2])
+#PCA.res
 
-pca
+#pca
 
-str(wb.pca)
+#str(wb.pca)
 
-wb.pca$absent <- as.numeric(wb.pca$absent)
-wb.pca$trace <- as.numeric(wb.pca$trace)
-wb.pca$low <- as.numeric(wb.pca$low)
-wb.pca$mid <- as.numeric(wb.pca$mid)
+#wb.pca$absent <- as.numeric(wb.pca$absent)
+#wb.pca$trace <- as.numeric(wb.pca$trace)
+#wb.pca$low <- as.numeric(wb.pca$low)
+#wb.pca$mid <- as.numeric(wb.pca$mid)
 
-pca <- prcomp(wb.pca[,unlist(lapply(wb.pca, FUN=class))=="numeric"])
-plot(PCA.res$x[,1:2], pch=16, col=as.numeric(wb.pca[,"month"]), main="Color annotation") # 2 first principal components
-legend("bottomleft", pch=16, col=unique(as.numeric(wb.pca[,"month"])), legend=unique(wb.pca[,"month"]))
-
-plot(PCA.res$x[,1:2], pch=16, col=as.numeric(wb.pca[,"depth"]), main="Color annotation") # 2 first principal components
-legend("bottomleft", pch=16, col=unique(as.numeric(wb.pca[,"depth"])), legend=unique(wb.pca[,"depth"]))
-
-PCA.plot.data$PC1.jitter <- jitter(PCA.plot.data$PC1, 50)
-PCA.plot.data$PC2.jitter <- jitter(PCA.plot.data$PC2, 50)
-
-plot(PC2.jitter ~ PC1.jitter, pch=as.numeric(wb.pca[,"depth"]), col=as.numeric(wb.pca[,"month"]), main="", xlim=c(-3,3), data = PCA.plot.data) # 2 first principal components
-legend("bottomleft", pch = 18, col=unique(as.numeric(wb.pca[,"month"])), legend=unique(wb.pca[,"month"]))
-legend("bottomright", pch=unique(as.numeric(wb.pca[,"depth"])), legend=unique(wb.pca[,"depth"]))
+# pca <- prcomp(wb.pca[,unlist(lapply(wb.pca, FUN=class))=="numeric"])
+# plot(PCA.res$x[,1:2], pch=16, col=as.numeric(wb.pca[,"month"]), main="Color annotation") # 2 first principal components
+# legend("bottomleft", pch=16, col=unique(as.numeric(wb.pca[,"month"])), legend=unique(wb.pca[,"month"]))
+# 
+# plot(PCA.res$x[,1:2], pch=16, col=as.numeric(wb.pca[,"depth"]), main="Color annotation") # 2 first principal components
+# legend("bottomleft", pch=16, col=unique(as.numeric(wb.pca[,"depth"])), legend=unique(wb.pca[,"depth"]))
+# 
+# PCA.plot.data$PC1.jitter <- jitter(PCA.plot.data$PC1, 50)
+# PCA.plot.data$PC2.jitter <- jitter(PCA.plot.data$PC2, 50)
+# 
+# plot(PC2.jitter ~ PC1.jitter, pch=as.numeric(wb.pca[,"depth"]), col=as.numeric(wb.pca[,"month"]), main="", xlim=c(-3,3), data = PCA.plot.data) # 2 first principal components
+# legend("bottomleft", pch = 18, col=unique(as.numeric(wb.pca[,"month"])), legend=unique(wb.pca[,"month"]))
+# legend("bottomright", pch=unique(as.numeric(wb.pca[,"depth"])), legend=unique(wb.pca[,"depth"]))
 ```
 
 ###Prevalence by Canopy Length and shoot density
@@ -337,7 +341,7 @@ curve(predict(model, data.frame(zm.veg.density = x), type = "resp"), add = T)
 bargraph.CI(x.factor = depth,
             response = zm.veg.density0.0625m2,
             #group = depth,
-            data = filter(wb, depth != "mid"),
+            data = wb,
             ylim = c(0,30),
             main = "",
             ylab = "Z. marina density 0.0625 m2", legend = T)
@@ -345,17 +349,29 @@ bargraph.CI(x.factor = depth,
 bargraph.CI(x.factor = depth,
             response = canopy.height.cm,
             #group = depth,
-            data = filter(wb, depth != "mid"),
+            data = wb,
+            ylim = c(0,150),
+            main = "",
+            ylab = "Z. marina canopy height cm", legend = T)
+bargraph.CI(x.factor = depth,
+            response = canopy.height.cm,
+            group = month.collected,
+            data = wb,
             ylim = c(0,150),
             main = "",
             ylab = "Z. marina canopy height cm", legend = T)
 
-model <-aov(zm.veg.density0.0625m2 ~ depth*month.collected, data = filter(wb, depth != "mid"))
+model <-aov(zm.veg.density0.0625m2 ~ depth*month.collected, data = wb)
 anova(model)
 plot(model)
+shapiro.test(model$residuals) #pass
+posthoc <- TukeyHSD(x=model, 'depth', conf.level=0.95)
+posthoc
 
-model <-aov(canopy.height.cm ~ depth * month.collected, data = filter(wb, depth != "mid"))
+model <-aov(canopy.height.cm ~ depth * month.collected, data = wb)
 anova(model)
+plot(model)
+shapiro.test(model$residuals) #fail without transformation
 ```
 
 
@@ -427,13 +443,12 @@ curve(predict(model, data.frame(zm.veg.density0.0625m2 = x), type = "resp"), add
 
 #METHODS COMPARISON
 ##DATA Organization
-#ALL GRAPHS EXCLUDING MID
 
 ```{r}
 wb.quad <- wb %>%
-    dplyr::select(month.collected, year.collected, depth, quadrat.id, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, L1.lesion.area.cm2, L2.lesion.area.cm2, L3.lesion.area.cm2, L4.lesion.area.cm2, L1.area.cm2, L2.area.cm2, L3.area.cm2, L4.area.cm2, no.leaves, L1.OS, L2.OS, L3.OS, L4.OS)
+    dplyr::select(month.collected, year.collected, depth, quadrat.id, WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, L1.lesion.no, L2.lesion.no, L3.lesion.no, L4.lesion.no, L1.lesion.area.cm2, L2.lesion.area.cm2, L3.lesion.area.cm2, L4.lesion.area.cm2, L1.area.cm2, L2.area.cm2, L3.area.cm2, L4.area.cm2, no.leaves, L1.OS, L2.OS, L3.OS, L4.OS)
 wb.quad$WD.field.qual <- NA
-for (n in 1:48) {
+for (n in 1:72) {
   if (wb.quad$WD.field.qual.absent[n] == 1)
   {wb.quad$WD.field.qual[n] = "absent"
   } else if (wb.quad$WD.field.qual.trace[n] == 1) {
@@ -444,28 +459,130 @@ for (n in 1:48) {
 
 str(wb.quad)
 
+for (n in 1:72) { #removing lesion area measurements from 3rd leaves that were outside sheath
+  if (wb.quad$L3.OS[n] == 1)
+    {wb.quad$L3.lesion.area.cm2[n] = NA
+  } else {wb.quad$L3.lesion.area.cm2[n] <- wb.quad$L3.lesion.area.cm2[n]}
+}
+
+for (n in 1:72) { #removing lesion area measurements from 4th leaves that were outside sheath
+  if (wb.quad$L4.OS[n] == 1)
+    {wb.quad$L4.lesion.area.cm2[n] = NA
+  } else {wb.quad$L4.lesion.area.cm2[n] <- wb.quad$L4.lesion.area.cm2[n]}
+}
+
+
 wb.quad$L1.lpc <- (wb.quad$L1.lesion.area.cm2 / wb.quad$L1.area.cm2)*100
 wb.quad$L2.lpc <- (wb.quad$L2.lesion.area.cm2/wb.quad$L2.area.cm2)*100
 wb.quad$L3.lpc <- (wb.quad$L3.lesion.area.cm2/wb.quad$L3.area.cm2)*100
 wb.quad$L4.lpc <- (wb.quad$L4.lesion.area.cm2/wb.quad$L4.area.cm2)*100
 
-wb.quad$WI <- NA
-for (n in 1:48) {
+for (n in 1:72) { #excluding lesions less than or equal to 0.1% of leaf as 0 because cannot tell if these are disease related
+  if (wb.quad$L1.lpc[n] > 0.1)
+  {wb.quad$L1.lpc[n] == wb.quad$L1.lpc[n]}
+  else {wb.quad$L1.lpc[n] = 0}
+}
+
+for (n in 1:72) { #excluding lesions less than or equal to 0.1% of leaf as 0 because cannot tell if these are disease related
+  if (wb.quad$L2.lpc[n] > 0.1)
+  {wb.quad$L2.lpc[n] == wb.quad$L2.lpc[n]}
+  else {wb.quad$L2.lpc[n] = 0}
+}
+
+wb.quad$L3.lpc <- ifelse(wb.quad$L3.lpc > 0.1 | is.na(wb.quad$L3.lpc), wb.quad$L3.lpc, 0)#excluding lesions less than or equal to 0.1% of leaf as 0 because cannot tell if these are disease related
+
+wb.quad$L4.lpc <- ifelse(wb.quad$L4.lpc > 0.1 | is.na(wb.quad$L4.lpc), wb.quad$L4.lpc, 0)#excluding lesions less than or equal to 0.1% of leaf as 0 because cannot tell if these are disease related
+
+#now all lesions less than 0.1 %cover have been excluded, creating a category for oldest leaf within sheath
+wb.quad$Llast.lpc <- wb.quad$L4.lpc
+wb.quad$Llast.lpc <- ifelse(is.na(wb.quad$Llast.lpc), wb.quad$L3.lpc, wb.quad$Llast.lpc)
+wb.quad$Llast.lpc <- ifelse(is.na(wb.quad$Llast.lpc), wb.quad$L2.lpc, wb.quad$Llast.lpc)
+
+wb.quad$Llast.lpc.cat <- NA
+for (n in 1:72) {
+  if (wb.quad$Llast.lpc[n] == 0)
+  {wb.quad$Llast.lpc.cat[n] = "absent"
+  } else if (wb.quad$Llast.lpc[n] > 0 & wb.quad$Llast.lpc[n] < 1) {
+    wb.quad$Llast.lpc.cat[n] = "trace"
+  } else if (wb.quad$Llast.lpc[n] > 1 & wb.quad$Llast.lpc[n] < 10) {
+    wb.quad$Llast.lpc.cat[n] = "low"
+  } else if (wb.quad$Llast.lpc[n] > 10 & wb.quad$Llast.lpc[n] < 30) {
+    wb.quad$Llast.lpc.cat[n] = "mid"
+  } else {wb.quad$Llast.lpc.cat[n] = "high"
+    }
+}
+
+#only diseased leaves from oldest leaf within sheath (intensity)
+wb.quad$Llast.lpc.intensity <- ifelse(wb.quad$Llast.lpc > 0, wb.quad$Llast.lpc, NA)
+#Prevelance of disease from oldest leaf within sheath (prevalence)
+wb.quad$Llast.present <- ifelse(wb.quad$Llast.lpc > 0, 1, 0)
+wb.quad$Llast.absent <- ifelse(wb.quad$Llast.lpc > 0, 0, 1)
+
+#Prevalence of disease from all leaves within a plant (prevalence)
+wb.quad$L1.present <- ifelse(wb.quad$L1.lpc > 0, 1, 0)
+wb.quad$L2.present <- ifelse(wb.quad$L2.lpc > 0, 1, 0)
+wb.quad$L3.present <- ifelse(wb.quad$L3.lpc > 0, 1, 0)
+wb.quad$L3.present <- ifelse(is.na(wb.quad$L3.present), 0, wb.quad$L3.present)
+wb.quad$L4.present <- ifelse(wb.quad$L4.lpc > 0, 1, 0)
+wb.quad$L4.present <- ifelse(is.na(wb.quad$L4.present), 0, wb.quad$L4.present)
+wb.quad$L1.absent <- ifelse(wb.quad$L1.lpc > 0, 0, 1)
+wb.quad$L2.absent <- ifelse(wb.quad$L2.lpc > 0, 0, 1)
+wb.quad$L3.absent <- ifelse(wb.quad$L3.lpc > 0, 0, 1)
+wb.quad$L3.absent <- ifelse(is.na(wb.quad$L3.absent), 0, wb.quad$L3.absent)
+wb.quad$L4.absent <- ifelse(wb.quad$L4.lpc > 0, 0, 1)
+wb.quad$L4.absent <- ifelse(is.na(wb.quad$L4.absent), 0, wb.quad$L4.absent)
+wb.quad$leaf.present <- wb.quad$L1.present + wb.quad$L2.present + wb.quad$L3.present + wb.quad$L4.present
+wb.quad$leaf.absent <- wb.quad$L1.absent + wb.quad$L2.absent + wb.quad$L3.absent + wb.quad$L4.absent
+wb.quad$leaf.present.i <- ifelse(wb.quad$WSWI > 0, wb.quad$leaf.present, NA)
+wb.quad$leaf.absent.i <- ifelse(wb.quad$WSWI > 0, wb.quad$leaf.absent, NA)
+
+#editing number of lesion to reflect wasting disease exclusion of less than 0.1%cover
+wb.quad$L1.lesion.no <- ifelse(wb.quad$L1.lpc > 0, wb.quad$L1.lesion.no, 0)
+wb.quad$L2.lesion.no <- ifelse(wb.quad$L2.lpc > 0, wb.quad$L2.lesion.no, 0)
+wb.quad$L3.lesion.no <- ifelse(wb.quad$L3.lpc > 0, wb.quad$L3.lesion.no, 0)
+wb.quad$L4.lesion.no <- ifelse(wb.quad$L4.lpc > 0, wb.quad$L4.lesion.no, 0)
+
+#number of lesion from oldest leaf within sheath
+wb.quad$Llast.lesion.no <- wb.quad$L4.lesion.no
+wb.quad$Llast.lesion.no <- ifelse(is.na(wb.quad$Llast.lesion.no), wb.quad$L3.lesion.no, wb.quad$Llast.lesion.no)
+wb.quad$Llast.lesion.no <- ifelse(is.na(wb.quad$Llast.lesion.no), wb.quad$L2.lesion.no, wb.quad$Llast.lesion.no)
+wb.quad$Llast.lesion.no <- ifelse(wb.quad$Llast.lesion.no > 0, wb.quad$Llast.lesion.no, NA)
+
+wb.quad$WI <- NA #Wasting index from Burdick et al. 1993
+for (n in 1:72) {
   wb.quad$WI[n] = max(wb.quad$L1.lpc[n], wb.quad$L2.lpc[n], wb.quad$L3.lpc[n], wb.quad$L4.lpc[n], na.rm = T)
 }
 
-wb.quad$WSWI <- NA
-for (n in 1:48) {
- wb.quad$WSWI[n] = sum(wb.quad$L1.lpc[n], wb.quad$L2.lpc[n], wb.quad$L3.lpc[n], wb.quad$L4.lpc[n], na.rm = T) / wb.quad$no.leaves[n]
+wb.quad$WSWI <- NA #Wholoe shoot wasting index from Burdick et al. 1993
+for (n in 1:72) {
+ wb.quad$WSWI[n] = mean(c(wb.quad$L1.lpc[n], wb.quad$L2.lpc[n], wb.quad$L3.lpc[n], wb.quad$L4.lpc[n]), na.rm = T)
 }
 
 wb.quad$field.est.avg <- (wb.quad$WD.field.est.absent*0 + wb.quad$WD.field.est.trace*1 + wb.quad$WD.field.est.low*2 + wb.quad$WD.field.est.mid*3)/(wb.quad$WD.field.est.absent + wb.quad$WD.field.est.trace + wb.quad$WD.field.est.low + wb.quad$WD.field.est.mid)
 
-wb.quad.field <- wb.quad %>%
-  dplyr::select(WD.field.est.absent, WD.field.est.trace, WD.field.est.low, WD.field.est.mid, WD.field.qual) %>%
-  filter(WD.field.est.absent != "NA") %>%
-  group_by(WD.field.qual) %>%
-  summarize(absent = sum(WD.field.est.absent), trace = sum(WD.field.est.trace), low = sum(WD.field.est.low), mid = sum(WD.field.est.mid))
+wb.quad$field.est.intensity <- (wb.quad$WD.field.est.trace*1 + wb.quad$WD.field.est.low*2 + wb.quad$WD.field.est.mid*3)/(wb.quad$WD.field.est.trace + wb.quad$WD.field.est.low + wb.quad$WD.field.est.mid)
+
+#creating a combined depth*month factor
+wb.quad$month.depth <- paste(wb.quad$month.collected, wb.quad$depth, sep = ".")
+wb.quad$month.depth <- as.factor(wb.quad$month.depth)
+
+wb.qual.field <- wb.quad %>% #including absents
+  dplyr::select(WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, month.depth) %>%
+  group_by(month.depth) %>%
+  summarize(absent = sum(WD.field.qual.absent), trace = sum(WD.field.qual.trace), low = sum(WD.field.qual.low))
+
+wb.qual.field.month <- wb.quad %>% #combining absents and traces into one column in order to deal with assumptions of statistical tests
+  #and only looking at month
+  dplyr::select(WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, month.collected) %>%
+  group_by(month.collected) %>%
+  summarize(absent.trace = sum(WD.field.qual.absent, WD.field.qual.trace), low = sum(WD.field.qual.low))
+
+wb.quad$depth.meld <- ifelse(wb.quad$depth == "shallow" | wb.quad$depth == "mid", "shm", "deep")
+wb.qual.field.depth <- wb.quad %>% #combining absents and traces into one column in order to deal with assumptions of statistical tests
+  #and only looking at shallow.mid vs deep
+  dplyr::select(WD.field.qual.absent, WD.field.qual.trace, WD.field.qual.low, depth.meld) %>%
+  group_by(depth.meld) %>%
+  summarize(absent.trace = sum(WD.field.qual.absent, WD.field.qual.trace), low = sum(WD.field.qual.low))
 
 #wb.quad (data set with all metrics are at the quadrat level)
   ##WD.field.qual = Categorical wasting disease lesion percent cover estimate by scuba diver within 0.5x0.5m2 quadrat
@@ -926,6 +1043,317 @@ bargraph.CI(x.factor=L4.OS,
             table.OS.quad
 
 mosaicplot(table.OS.quad, main = "October: 4th Leaf Outside Shoot and Quad Percent Cover", xlab = "4th Leaf Outside Sheath", ylab = "Quad Percent Cover", col=T)
+
+```
+
+
+
+#Forest Figures/analyses
+## Quadrat mean percent cover analyses
+```{r}
+#Season
+tab.season <- matrix(data = c(11,36,25,0), nrow = 2, ncol = 2)
+rownames(tab.season) <- c("july", "october")
+colnames(tab.season) <- c("trace", "low")
+fisher.test(tab.season) #lesion severity is lower in fall than in summer
+
+#depth
+tab.depth <- matrix(data = c(13, 34, 11, 14), nrow = 2, ncol = 2)
+rownames(tab.depth) <- c("deep", "shm")
+colnames(tab.depth) <- c("trace", "low")
+fisher.test(tab.depth) #lesion severity does not differ between deep transect and shallow/mid transects
+
+```
+
+##prevalence- Oldest leaf in sheath
+```{r}
+bargraph.CI(x.factor = depth,
+            response = Llast.present,
+            group = month.collected,
+            data = wb.quad,
+            ylim = c(0,1.1),
+            main = "scan oldest leaf in sheath Prevalence",
+            ylab = "proportion of shoots infected", legend = T)
+
+model <- glm(cbind(Llast.present, Llast.absent) ~ month.collected*depth, na.action = na.omit, data = wb.quad, family = binomial)
+anova(model, test = "LR") #no significant effects
+```
+
+##intensity- Oldest leaf in sheath
+```{r}
+wb.quad$logit.Llast.lpc.intensity <- ifelse(wb.quad$Llast.lpc.intensity > 0, log((wb.quad$Llast.lpc.intensity/100)/(1-(wb.quad$Llast.lpc.intensity/100))), NA)
+
+bargraph.CI(x.factor = depth,
+            response = Llast.lpc.intensity,
+            group = month.collected,
+            data = wb.quad,
+            ylim = c(0,10),
+            main = "scan oldest leaf in sheath intensity",
+            ylab = "Lesion percent cover", legend = T)
+
+model <- aov(logit.Llast.lpc.intensity ~ month.collected*depth, data = wb.quad)
+anova(model) #no significant effects
+shapiro.test(model$residuals) #fails even with transformation
+hist(wb.quad$Llast.lpc.intensity)
+
+kruskal.test(Llast.lpc.intensity ~ month.depth, data = wb.quad) #not significant (neither are depth or month.collected alone)
+
+```
+
+##Categorical intensity Oldest leaf in sheath
+```{r}
+#Season
+tab.season <- matrix(data = c(9,15,18,14), nrow = 2, ncol = 2)
+rownames(tab.season) <- c("july", "october")
+colnames(tab.season) <- c("trace", "low/mid")
+fisher.test(tab.season) #Not significant
+chisq.test(tab.season) #Not significant
+
+table.Llast.lps.cat.season<- matrix(c(9,15,3,15,14,0), ncol = 3, byrow = 2)
+  colnames(table.Llast.lps.cat.season) <- c("trace", "low", "mid")
+  rownames(table.Llast.lps.cat.season) <- c("july", "october")
+  table.Llast.lps.cat.season <- as.table(table.Llast.lps.cat.season)
+table.Llast.lps.cat.season
+
+mosaicplot(table.Llast.lps.cat.season, main = "Month Collected vs Oldest Leaf in Sheath Lesion Percent Cover", xlab = "Month Collected", ylab = "Lesion Percent Cover", col=c("grey80", "grey50", "grey20"))
+```
+
+##NMDS Categorical intensity of oldest leaf in sheath
+```{r}
+Llast.lpc.cat <- read.csv("Llast.lps.cat.csv", header = T)
+
+str(Llast.lpc.cat)
+
+Llast.lpc.cat$month.depth <- paste(Llast.lpc.cat$season, Llast.lpc.cat$depth, sep = ".")
+
+Llast.lpc.cat$month.depth <- as.factor(Llast.lpc.cat$month.depth)
+
+community <- subset(Llast.lpc.cat, select = c("prop.trace",
+                                        "prop.low",
+                                        "prop.mid"))
+## --- nMDS Analysis/figures ---
+set.seed(1)
+
+# Hellinger transformation to downplay the effects of rare species
+# community.trans <- decostand(community, "hell")
+
+comm.mds <- metaMDS(community, autotransform = FALSE) ##nMDS analysis code
+
+# Rsquared
+(Rsq <- 1 - comm.mds$stress^2) #high Rsquared means that axis explain most of variation in data
+
+# Extract transect scores from nMDS object to facilitate custom plot
+quad.scores <- comm.mds$points
+
+# Extract disease severity category scores (commonly species scores)
+severity.scores <- comm.mds$species
+
+# Relabel severity scores
+rownames(severity.scores) <- c("Trace", 
+                              "Low", "Mid")
+
+mycols.month <- cb[c("blue", "red")] ##setting up vector to color points by depth, data set won't ignore third depth so added extra for 'ghost' mid depth)
+
+## Prepare an empty plot
+#pdf(file="nmds_meanMaxTemp.pdf", width=8, height=8)
+par(plotconf)
+plot(comm.mds$points[ , 1], comm.mds$points[ , 2], t = "n", 
+     xlab = "nMDS 1", ylab = "",
+     main= "",
+     xlim = c(-1.25, 1.25), 
+     xaxs = "i",
+     ylim = c(-1, 1))
+# Add y-axis label
+ylabel("nMDS 2")
+# Add top and right axes
+mbox()
+## Draw grid with dashed lines about origin
+abline(h = 0, lty = 2)
+abline(v = 0, lty = 2)
+add_label(x = 0.78, lab = substitute(paste(R^2 == rsq),
+                                     list(rsq = format(Rsq, digit = 5))))
+
+# Plot each region's site scores in a different color and shape
+points(quad.scores[1:3,], pch = 21, bg = mycols.month[1], col = mycols.month[1])
+points(quad.scores[4:6,], pch = 22, bg = mycols.month[2], col = mycols.month[2])
+
+month.names <- paste(levels(Llast.lpc.cat$season)) #, "month")
+legend(x = "topleft", legend = month.names, pch = (1:2) + 20, 
+       col = mycols.month, 
+       pt.bg = mycols.month)
+text(severity.scores, rownames(severity.scores), col = cb["pink"])
+
+regions <- Llast.lpc.cat$season
+#regions2 <- wb$depth
+
+env <- subset(Llast.lpc.cat, select = c("season"))
+
+expl.fit <- envfit(comm.mds, expl.all, permu = 999, na.rm = TRUE)
+env.fit <- envfit(comm.mds, env, permu = 999, na.rm = TRUE)
+biotic.fit <- envfit(comm.mds, biotic, permu = 999, na.rm = TRUE)
+expl.fit
+env.fit
+biotic.fit
+
+rownames(expl.fit$factors$centroids) <- c("July", "October" , "" , "")
+rownames(expl.fit$vectors$arrows) <- c("Density", "Length")
+
+expl.fit2 <- expl.fit
+#expl.fit2$vectors <- NULL
+
+# Plot 95% CI ellipses
+plot(expl.fit2, p.max = 0.2, col = cb["black"])
+pl <- ordiellipse(comm.mds, regions, kind = "se", conf = 0.95, lwd = 2, 
+                  draw = "poly", col = cb["grey"], alpha = 40, label = FALSE)
+
+
+
+```
+
+
+##intensity- avg 5 shoot from field
+```{r}
+bargraph.CI(x.factor = depth,
+            response = field.est.intensity,
+            group = month.collected,
+            data = wb.quad,
+            ylim = c(0,3),
+            main = "Field oldest leaf in sheath intensity",
+            ylab = "Relative lesion percent cover", legend = T)
+
+model <- aov(field.est.intensity ~ month.collected*depth, data = wb.quad)
+anova(model)
+```
+
+##Lesion number on infected shoots from scans
+```{r}
+bargraph.CI(x.factor = depth,
+            response = Llast.lesion.no,
+            group = month.collected,
+            data = wb.quad,
+            ylim = c(0,20),
+            main = "Scan oldest leaf in sheath lesion number in infected leaves",
+            ylab = "Lesion number per leaf", legend = T)
+
+model <- aov(Llast.lesion.no ~ month.collected*depth, data = wb.quad)
+anova(model) #no siginificant effects
+shapiro.test(model$residuals) #passed
+leveneTest(model) #passed
+```
+
+##Average Lesion size
+```{r}
+wb.quad$avg.lesion.pc <- wb.quad$Llast.lpc.intensity/wb.quad$Llast.lesion.no
+wb.quad$logit.avg.lesion.pc <- ifelse(wb.quad$avg.lesion.pc > 0, log((wb.quad$avg.lesion.pc/100)/(1-(wb.quad$avg.lesion.pc/100))), NA)
+
+bargraph.CI(x.factor = depth,
+            response = avg.lesion.pc,
+            group = month.collected,
+            data = wb.quad,
+            ylim = c(0,1.5),
+            main = "Scan oldest leaf in sheath avg lesion percent cover in infected leaves",
+            ylab = "Mean lesion percent cover", legend = T)
+
+model <- aov(logit.avg.lesion.pc ~ month.collected*depth, data = wb.quad)
+anova(model) #no significant effects
+shapiro.test(model$residuals) #passed with logit transformation
+leveneTest(model) #passed
+```
+
+##Wasting index (Burdick 1993)
+```{r}
+wb.quad$logit.WI <- ifelse(wb.quad$WI > 0, log((wb.quad$WI/100)/(1-(wb.quad$WI/100))), NA) #excludes shoots without disease
+
+bargraph.CI(x.factor = depth,
+            response = WI,
+            group = month.collected,
+            data = wb.quad,
+            ylim = c(0,10),
+            main = "",
+            ylab = "Wasting Index", legend = T)
+
+model <- aov(logit.WI ~ month.collected*depth, data = wb.quad)
+anova(model) #no significant effects
+shapiro.test(model$residuals) #passed
+plot(model) 
+hist(model$residuals)
+
+hist(asin(sqrt(wb.quad$WI/100)))
+```
+
+##Whole Shoot Wasting index (Burdick 1993)
+```{r}
+
+wb.quad$logit.WSWI <- ifelse(wb.quad$WSWI > 0, log((wb.quad$WSWI/100)/(1-(wb.quad$WSWI/100))), NA) #excludes shoots without disease
+
+bargraph.CI(x.factor = depth,
+            response = WSWI,
+            group = month.collected,
+            data = wb.quad,
+            ylim = c(0,5),
+            main = "",
+            ylab = "Whole Shoot Wasting Index", legend = T)
+
+model <- aov(logit.WSWI ~ month.collected*depth, data = wb.quad)
+anova(model) #no significant effects
+shapiro.test(model$residuals) #passed
+plot(model)
+hist(model$residuals)
+
+hist(asin(sqrt(wb.quad$WI/100)))
+```
+
+##Number of leaves
+```{r}
+wb$no.leaves.edit <- wb$no.leaves - (wb$L2.OS + wb$L3.OS + wb$L4.OS)
+
+model <- aov(no.leaves.edit ~ month.collected*depth, data = wb)
+anova(model) #marginal interaction
+shapiro.test(model$residuals) #fail without transformation
+hist(model$residuals)
+
+bargraph.CI(x.factor = depth,
+            response = no.leaves.edit,
+            group = month.collected,
+            data = wb,
+            ylim = c(0,5),
+            ylab = "number of leaves", legend = T)
+```
+
+##Prevalence Leaf (all)
+```{r}
+bargraph.CI(x.factor = month.collected,
+            response = leaf.present/(leaf.present+leaf.absent),
+            #group = month.collected,
+            data = wb.quad,
+            ylim = c(0,1.1),
+            main = "scan all leaves in sheath Prevalence",
+            ylab = "Proportion of leaves infected", legend = T)
+
+model <- glm(cbind(leaf.present, leaf.absent) ~ month.collected*depth, na.action = na.omit, data = wb.quad, family = binomial)
+anova(model, test = "LR") #significant effect of season
+
+bargraph.CI(x.factor = month.collected,
+            response = leaf.present.i/(leaf.present.i+leaf.absent.i),
+            #group = month.collected,
+            data = wb.quad,
+            ylim = c(0,1.1),
+            main = "scan all leaves in sheath Prevalence (only of infected shoots)",
+            ylab = "Proportion of leaves infected on infected shoots", legend = T)
+
+model <- glm(cbind(leaf.present.i, leaf.absent.i) ~ month.collected*depth, na.action = na.omit, data = filter(wb.quad, depth != "mid"), family = binomial)
+anova(model, test = "LR") #significant effect of month collected, fewer infected in July than in October
+
+
+bargraph.CI(x.factor = depth,
+            response = leaf.absent.i,
+            group = month.collected,
+            data = wb.quad,
+            ylim = c(0,3),
+            main = "scan number of healthy leaves in sheath (only of infected shoots)",
+            ylab = "Number of healthy leaves in sheath of infected shoots", legend = T)
+model <- aov(leaf.absent.i ~ month.collected*depth, data = filter(wb.quad, depth != "mid"))
+anova(model)
 
 ```
 
