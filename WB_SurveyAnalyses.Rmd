@@ -1322,9 +1322,9 @@ bargraph.CI(x.factor = depth,
 
 ##Prevalence Leaf (all)
 ```{r}
-bargraph.CI(x.factor = depth,
+bargraph.CI(x.factor = month.collected,
             response = leaf.present/(leaf.present+leaf.absent),
-            group = month.collected,
+            #group = month.collected,
             data = wb.quad,
             ylim = c(0,1.1),
             main = "scan all leaves in sheath Prevalence",
@@ -1333,16 +1333,16 @@ bargraph.CI(x.factor = depth,
 model <- glm(cbind(leaf.present, leaf.absent) ~ month.collected*depth, na.action = na.omit, data = wb.quad, family = binomial)
 anova(model, test = "LR") #significant effect of season
 
-bargraph.CI(x.factor = depth,
+bargraph.CI(x.factor = month.collected,
             response = leaf.present.i/(leaf.present.i+leaf.absent.i),
-            group = month.collected,
+            #group = month.collected,
             data = wb.quad,
             ylim = c(0,1.1),
             main = "scan all leaves in sheath Prevalence (only of infected shoots)",
             ylab = "Proportion of leaves infected on infected shoots", legend = T)
 
 model <- glm(cbind(leaf.present.i, leaf.absent.i) ~ month.collected*depth, na.action = na.omit, data = filter(wb.quad, depth != "mid"), family = binomial)
-anova(model, test = "LR") #significant effect of depth, fewer infected at deep depth compared to shallow depth
+anova(model, test = "LR") #significant effect of month collected, fewer infected in July than in October
 
 
 bargraph.CI(x.factor = depth,
