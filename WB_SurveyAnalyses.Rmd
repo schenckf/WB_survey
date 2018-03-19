@@ -20,6 +20,9 @@ library(car)
 
 source("http://faraway.neu.edu/data/Rprofile")
 
+#time series data
+library(lubridate)
+
 ```
 
 #Uploading Data
@@ -46,12 +49,13 @@ wb.5shoot.binom <- read.csv("WastingDiseasePA_31OCT2017.csv", header = T)
 ```{r}
 #prevalence (presence vs absence)
 bargraph.CI(x.factor = depth,
-            response = wd.prevalence,
-            group = month.collected,
-            data = wb,
+            response = wb.5shoot.binom.ds$wd.present/(wb.5shoot.binom.ds$wd.present+wb.5shoot.binom.ds$wd.absent),
+            #group = month.collected,
+            data = wb.5shoot.binom.ds,
             ylim = c(0,1.1),
-            main = "5-shoot Prevalence",
-            ylab = "proportion of shoots infected per plot", legend = T)
+            col = c(cb["grey"], cb["white"]))
+            #main = "5-shoot Prevalence",
+            #ylab = "proportion of shoots infected per plot", legend = T)
 
 #various lesion severity levels
 ##trace
@@ -111,9 +115,9 @@ wb.5shoot.binom.ds <- wb.5shoot.binom %>%
 
 
 ##binom model
-model <- glmer(cbind(wd.present, wd.absent) ~ month.collected*depth + (1|month.collected/depth/quadrat.id), na.action = na.omit, data = wb.5shoot.binom.ds, family = binomial)
+model <- glm(cbind(wd.present, wd.absent) ~ month.collected*depth, na.action = na.omit, data = wb.5shoot.binom.ds, family = binomial) #glmer ... + (1|month.collected/depth/quadrat.id)
 Anova(model)
-anova(model, test = "LR") ### add quadrat as a random effect give each quadrat a unique identifier
+anova(model, test = "LR") ### add quadrat as a random effect give each quadrat a unique identifier I don't think I need to because coded as quadrats not individual shoots
 
 model <- lm(zm.veg.density ~ month.collected * depth, na.action = na.omit, data = wb.5shoot.binom.ds) #density analyses
 anova(model) #depth not month significant
@@ -133,6 +137,8 @@ wb.nmds <- wb[!is.na(wb$WD.field.est.absent) &
                 !is.na(wb$zm.veg.density0.0625m2) &
                 !is.na(wb$canopy.height.cm) &
                 wb$depth != "mid", ]
+  #group_by(month.collected, depth) %>%
+  #summarize(WD.field.est.absent = sum(WD.field.est.absent), WD.field.est.trace = sum(WD.field.est.trace), WD.field.est.low = sum(WD.field.est.low), WD.field.est.mid = sum(WD.field.est.mid))
 
 #wb.nmds$WD.field.est.absent.p <- 1-wb.nmds$wd.prevalence
 
@@ -146,9 +152,11 @@ wb.nmds$month.depth <- paste(wb.nmds$month.collected, wb.nmds$depth, sep = ".")
 
 wb.nmds$month.depth <- as.factor(wb.nmds$month.depth)
 
-community <- subset(wb.nmds, select = c("WD.field.est.trace.p",
+community <- subset(wb.nmds, select = c( #"WD.field.est.absent.p",
+                                        "WD.field.est.trace.p",
                                         "WD.field.est.low.p",
                                         "WD.field.est.mid.p"))
+
 
 str(wb.nmds)
 
@@ -170,9 +178,12 @@ quad.scores <- comm.mds$points
 severity.scores <- comm.mds$species
 
 # Relabel severity scores
-rownames(severity.scores) <- c("Trace", 
-                              "Low", "Mid")
+rownames(severity.scores) <- c(#"Absent",
+                               "Trace",
+                               "Low",
+                               "Mid")
 
+mycols.month <- cb[c("blue", "red")]
 mycols.month.depth <- cb[c("blue",  "turquoise", "red" , "orange")] ##setting up vector to color points by depth, data set won't ignore third depth so added extra for 'ghost' mid depth)
 
 ## Prepare an empty plot
@@ -183,7 +194,7 @@ plot(comm.mds$points[ , 1], comm.mds$points[ , 2], t = "n",
      main= "",
      xlim = c(-1.25, 1.25), 
      xaxs = "i",
-     ylim = c(-1, 1))
+     ylim = c(-1.25, 1.25))
 # Add y-axis label
 ylabel("nMDS 2")
 # Add top and right axes
@@ -195,19 +206,24 @@ add_label(x = 0.78, lab = substitute(paste(R^2 == rsq),
                                      list(rsq = format(Rsq, digit = 5))))
 
 # Plot each region's site scores in a different color and shape
-for (i in 1:length(levels(wb.nmds$month.depth))) {
-  locs <- which(wb.nmds$month.depth == levels(wb.nmds$month.depth)[i])
-  p <- quad.scores[locs, 1:2]
-  points(p[ , 1], p[ , 2], pch = i + 20, 
-         bg = mycols.month.depth[i], 
-         col = mycols.month.depth[i])
-}
+#for (i in 1:length(levels(wb.nmds$month.depth))) {
+  #locs <- which(wb.nmds$month.depth == levels(wb.nmds$month.depth)[i])
+  #p <- quad.scores[locs, 1:2]
+  #points(p[ , 1], p[ , 2], pch = i + 20, 
+         #bg = mycols.month.depth[i], 
+         #col = mycols.month.depth[i])
+#}
+
+#Plot each months site scores by color and shape
+points(jitter(quad.scores[1:12,], factor = 1, amount = 0.15), pch = 21, bg = mycols.month[1], col = mycols.month[1], cex = 2)
+points(jitter(quad.scores[13:24,], factor = 1, amount = 0.15), pch = 22, bg = mycols.month[2], col = mycols.month[2], cex = 2)
+
 
 month.depth.names <- paste(levels(wb.nmds$month.depth)) #, "month")
-legend(x = "topleft", legend = month.depth.names, pch = (1:4) + 20, 
-       col = mycols.month.depth, 
-       pt.bg = mycols.month.depth)
-text(severity.scores, rownames(severity.scores), col = cb["pink"])
+legend(x = "topleft", legend = c("July", "October"), pch = (1:2) + 20, 
+       col = mycols.month, 
+       pt.bg = mycols.month, cex = 2)
+text(severity.scores, rownames(severity.scores), col = cb["yellow"], cex = 2)
 
 regions <- wb.nmds$month.collected
 #regions2 <- wb$depth
@@ -239,7 +255,7 @@ expl.fit2 <- expl.fit
 # Plot 95% CI ellipses
 plot(expl.fit2, p.max = 0.2, col = cb["black"])
 pl <- ordiellipse(comm.mds, regions, kind = "se", conf = 0.95, lwd = 2, 
-                  draw = "poly", col = cb["grey"], alpha = 40, label = FALSE)
+                  draw = "poly", col = mycols.month, alpha = 40, label = FALSE)
 
 ```
 
@@ -498,6 +514,7 @@ wb.quad$Llast.lpc <- wb.quad$L4.lpc
 wb.quad$Llast.lpc <- ifelse(is.na(wb.quad$Llast.lpc), wb.quad$L3.lpc, wb.quad$Llast.lpc)
 wb.quad$Llast.lpc <- ifelse(is.na(wb.quad$Llast.lpc), wb.quad$L2.lpc, wb.quad$Llast.lpc)
 
+#categorical interpretation of Llast lesion % cover
 wb.quad$Llast.lpc.cat <- NA
 for (n in 1:72) {
   if (wb.quad$Llast.lpc[n] == 0)
@@ -553,11 +570,37 @@ for (n in 1:72) {
   wb.quad$WI[n] = max(wb.quad$L1.lpc[n], wb.quad$L2.lpc[n], wb.quad$L3.lpc[n], wb.quad$L4.lpc[n], na.rm = T)
 }
 
-wb.quad$WSWI <- NA #Wholoe shoot wasting index from Burdick et al. 1993
+wb.quad$WSWI <- NA #Whole shoot wasting index from Burdick et al. 1993
 for (n in 1:72) {
  wb.quad$WSWI[n] = mean(c(wb.quad$L1.lpc[n], wb.quad$L2.lpc[n], wb.quad$L3.lpc[n], wb.quad$L4.lpc[n]), na.rm = T)
 }
 
+#Lesion % cover of all leaf tissue
+wb.quad$lpc.tissue <- NA
+for (n in 1:72) {
+  wb.quad$lpc.tissue[n] = (sum(wb.quad$L1.lesion.area.cm2[n], wb.quad$L2.lesion.area.cm2[n], wb.quad$L3.lesion.area.cm2[n], wb.quad$L4.lesion.area.cm2[n], na.rm = T) / sum(wb.quad$L1.area.cm2[n], wb.quad$L2.area.cm2[n], wb.quad$L3.area.cm2[n], wb.quad$L4.area.cm2[n], na.rm = T))*100
+}
+
+#editing all leaf tissue % cover to reflect wasting disease exclusion of less than 0.1%cover
+wb.quad$lpc.tissue <- ifelse(wb.quad$lpc.tissue > 0.1, wb.quad$lpc.tissue, 0)
+
+#Categorical interpretation of total lesion area %cover
+wb.quad$lpc.tissue.cat <- NA
+for (n in 1:72) {
+  if (wb.quad$lpc.tissue[n] == 0)
+  {wb.quad$lpc.tissue.cat[n] = "absent"
+  } else if (wb.quad$lpc.tissue[n] > 0 & wb.quad$lpc.tissue[n] < 1) {
+    wb.quad$lpc.tissue.cat[n] = "trace"
+  } else if (wb.quad$lpc.tissue[n] > 1 & wb.quad$lpc.tissue[n] < 10) {
+    wb.quad$lpc.tissue.cat[n] = "low"
+  } else if (wb.quad$lpc.tissue[n] > 10 & wb.quad$lpc.tissue[n] < 30) {
+    wb.quad$lpc.tissue.cat[n] = "mid"
+  } else {wb.quad$lpc.tissue.cat[n] = "high"
+    }
+}
+
+
+#mean field targetted leave values
 wb.quad$field.est.avg <- (wb.quad$WD.field.est.absent*0 + wb.quad$WD.field.est.trace*1 + wb.quad$WD.field.est.low*2 + wb.quad$WD.field.est.mid*3)/(wb.quad$WD.field.est.absent + wb.quad$WD.field.est.trace + wb.quad$WD.field.est.low + wb.quad$WD.field.est.mid)
 
 wb.quad$field.est.intensity <- (wb.quad$WD.field.est.trace*1 + wb.quad$WD.field.est.low*2 + wb.quad$WD.field.est.mid*3)/(wb.quad$WD.field.est.trace + wb.quad$WD.field.est.low + wb.quad$WD.field.est.mid)
@@ -1065,6 +1108,102 @@ fisher.test(tab.depth) #lesion severity does not differ between deep transect an
 
 ```
 
+##NMDS Quadrat mean percent cover
+```{r}
+wb.transect <- wb.quad %>%
+  group_by(month.collected, depth) %>%
+  summarize(WD.field.qual.absent = sum(WD.field.qual.absent), WD.field.qual.trace = sum(WD.field.qual.trace), WD.field.qual.low = sum(WD.field.qual.low))
+
+wb.transect$qual.absent.prop <- wb.transect$WD.field.qual.absent / (wb.transect$WD.field.qual.absent + wb.transect$WD.field.qual.trace + wb.transect$WD.field.qual.low)
+
+wb.transect$qual.trace.prop <- wb.transect$WD.field.qual.trace / (wb.transect$WD.field.qual.absent + wb.transect$WD.field.qual.trace + wb.transect$WD.field.qual.low)
+
+wb.transect$qual.low.prop <- wb.transect$WD.field.qual.low / (wb.transect$WD.field.qual.absent + wb.transect$WD.field.qual.trace + wb.transect$WD.field.qual.low)
+  
+community <- subset(wb.transect, select = c("qual.absent.prop",
+                                        "qual.trace.prop",
+                                        "qual.low.prop"))
+## --- nMDS Analysis/figures ---
+set.seed(1)
+
+# Hellinger transformation to downplay the effects of rare species
+# community.trans <- decostand(community, "hell")
+
+comm.mds <- metaMDS(community, autotransform = FALSE) ##nMDS analysis code
+
+# Rsquared
+(Rsq <- 1 - comm.mds$stress^2) #high Rsquared means that axis explain most of variation in data
+
+# Extract transect scores from nMDS object to facilitate custom plot
+quad.scores <- comm.mds$points
+
+# Extract disease severity category scores (commonly species scores)
+severity.scores <- comm.mds$species
+
+# Relabel severity scores
+rownames(severity.scores) <- c("absent", 
+                              "trace", "low")
+
+mycols.month <- cb[c("blue", "red")] ##setting up vector to color points by depth, data set won't ignore third depth so added extra for 'ghost' mid depth)
+
+## Prepare an empty plot
+#pdf(file="nmds_meanMaxTemp.pdf", width=8, height=8)
+par(plotconf)
+plot(comm.mds$points[ , 1], comm.mds$points[ , 2], t = "n", 
+     xlab = "nMDS 1", ylab = "",
+     main= "",
+     xlim = c(-1.25, 1.25), 
+     xaxs = "i",
+     ylim = c(-1, 1))
+# Add y-axis label
+ylabel("nMDS 2")
+# Add top and right axes
+mbox()
+## Draw grid with dashed lines about origin
+abline(h = 0, lty = 2)
+abline(v = 0, lty = 2)
+add_label(x = 0.78, lab = substitute(paste(R^2 == rsq),
+                                     list(rsq = format(Rsq, digit = 5))))
+
+# Plot each region's site scores in a different color and shape
+points(jitter(quad.scores[1:3,]), pch = 21, bg = mycols.month[1], col = mycols.month[1], cex = 2)
+points(quad.scores[4:6,], pch = 22, bg = mycols.month[2], col = mycols.month[2], cex = 2)
+
+month.names <- c("July", "October")
+legend(x = "topleft", legend = month.names, pch = (1:2) + 20, 
+       col = mycols.month, 
+       pt.bg = mycols.month,
+       cex = 2)
+text(severity.scores, c("Absent", "Trace", "Low"), col = cb["pink"], cex = 2)
+
+regions <- wb.transect$month.collected
+#regions2 <- wb$depth
+
+expl.all <- subset(wb.transect, select = c("month.collected"))
+
+#env <- subset(wb.transect, select = c("month.collected"))
+
+expl.fit <- envfit(comm.mds, expl.all, permu = 999, na.rm = TRUE)
+#env.fit <- envfit(comm.mds, env, permu = 999, na.rm = TRUE)
+#biotic.fit <- envfit(comm.mds, biotic, permu = 999, na.rm = TRUE)
+expl.fit
+#env.fit
+#biotic.fit
+
+rownames(expl.fit$factors$centroids) <- c("July", "October" , "" , "")
+#rownames(expl.fit$vectors$arrows) <- c("Density", "Length")
+
+expl.fit2 <- expl.fit
+#expl.fit2$vectors <- NULL
+
+# Plot 95% CI ellipses
+plot(expl.fit2, p.max = 0.2, col = cb["black"])
+pl <- ordiellipse(comm.mds, regions, kind = "se", conf = 0.95, lwd = 2, 
+                  draw = "poly", col = cb["grey"], alpha = 40, label = FALSE)
+
+```
+
+
 ##prevalence- Oldest leaf in sheath
 ```{r}
 bargraph.CI(x.factor = depth,
@@ -1118,7 +1257,7 @@ table.Llast.lps.cat.season
 mosaicplot(table.Llast.lps.cat.season, main = "Month Collected vs Oldest Leaf in Sheath Lesion Percent Cover", xlab = "Month Collected", ylab = "Lesion Percent Cover", col=c("grey80", "grey50", "grey20"))
 ```
 
-##NMDS Categorical intensity of oldest leaf in sheath
+##NMDS Categorical severity of oldest leaf in sheath
 ```{r}
 Llast.lpc.cat <- read.csv("Llast.lps.cat.csv", header = T)
 
@@ -1128,9 +1267,10 @@ Llast.lpc.cat$month.depth <- paste(Llast.lpc.cat$season, Llast.lpc.cat$depth, se
 
 Llast.lpc.cat$month.depth <- as.factor(Llast.lpc.cat$month.depth)
 
-community <- subset(Llast.lpc.cat, select = c("prop.trace",
-                                        "prop.low",
-                                        "prop.mid"))
+community <- subset(Llast.lpc.cat, select = c("prop.absent",
+                                              "prop.trace",
+                                              "prop.low",
+                                              "prop.mid"))
 ## --- nMDS Analysis/figures ---
 set.seed(1)
 
@@ -1149,7 +1289,102 @@ quad.scores <- comm.mds$points
 severity.scores <- comm.mds$species
 
 # Relabel severity scores
-rownames(severity.scores) <- c("Trace", 
+rownames(severity.scores) <- c("Absent","Trace", 
+                              "Low", "Mid")
+
+mycols.month <- cb[c("blue", "red")] ##setting up vector to color points by depth, data set won't ignore third depth so added extra for 'ghost' mid depth)
+
+## Prepare an empty plot
+#pdf(file="nmds_meanMaxTemp.pdf", width=8, height=8)
+par(plotconf)
+plot(comm.mds$points[ , 1], comm.mds$points[ , 2], t = "n", 
+     xlab = "nMDS 1", ylab = "",
+     main= "",
+     xlim = c(-1.25, 1.25), 
+     xaxs = "i",
+     ylim = c(-1, 1))
+# Add y-axis label
+ylabel("nMDS 2")
+# Add top and right axes
+mbox()
+## Draw grid with dashed lines about origin
+abline(h = 0, lty = 2)
+abline(v = 0, lty = 2)
+#add_label(x = 0.78, lab = substitute(paste(R^2 == rsq),
+                                     #list(rsq = format(Rsq, digit = 5))))
+
+# Plot each region's site scores in a different color and shape
+points(quad.scores[1:3,], pch = 21, bg = mycols.month[1], col = mycols.month[1], cex = 2)
+points(quad.scores[4:6,], pch = 22, bg = mycols.month[2], col = mycols.month[2], cex = 2)
+
+month.names <- c("July", "October")
+legend(x = "topright", legend = month.names, pch = (1:2) + 20, 
+       col = mycols.month, 
+       pt.bg = mycols.month, cex = 2)
+text(severity.scores, rownames(severity.scores), col = cb["pink"], cex = 2)
+
+regions <- Llast.lpc.cat$season
+#regions2 <- wb$depth
+
+expl.all <- subset(Llast.lpc.cat, select = c("season"))
+
+#env <- subset(Llast.lpc.cat, select = c("season"))
+
+expl.fit <- envfit(comm.mds, expl.all, permu = 500, na.rm = TRUE)
+#env.fit <- envfit(comm.mds, env, permu = 999, na.rm = TRUE)
+#biotic.fit <- envfit(comm.mds, biotic, permu = 999, na.rm = TRUE)
+expl.fit
+#env.fit
+#biotic.fit
+
+rownames(expl.fit$factors$centroids) <- c("July", "October")
+#rownames(expl.fit$vectors$arrows) <- c("Density", "Length")
+
+expl.fit2 <- expl.fit
+#expl.fit2$vectors <- NULL
+
+# Plot 95% CI ellipses
+plot(expl.fit2, p.max = 0.2, col = cb["black"])
+pl <- ordiellipse(comm.mds, regions, kind = "se", conf = 0.95, lwd = 2, 
+                  draw = "poly", col = mycols.month, alpha = 40, label = FALSE,)
+
+
+
+```
+
+##NMDS Categorical severity of all leaves in sheath
+```{r}
+Lall.lpc.cat <- read.csv("Lall.lps.cat.csv", header = T)
+
+str(Lall.lpc.cat)
+
+Lall.lpc.cat$month.depth <- paste(Lall.lpc.cat$season, Lall.lpc.cat$depth, sep = ".")
+
+Lall.lpc.cat$month.depth <- as.factor(Lall.lpc.cat$month.depth)
+
+community <- subset(Lall.lpc.cat, select = c("prop.absent",
+                                              "prop.trace",
+                                              "prop.low",
+                                              "prop.mid"))
+## --- nMDS Analysis/figures ---
+set.seed(1)
+
+# Hellinger transformation to downplay the effects of rare species
+# community.trans <- decostand(community, "hell")
+
+comm.mds <- metaMDS(community, autotransform = FALSE) ##nMDS analysis code
+
+# Rsquared
+(Rsq <- 1 - comm.mds$stress^2) #high Rsquared means that axis explain most of variation in data
+
+# Extract transect scores from nMDS object to facilitate custom plot
+quad.scores <- comm.mds$points
+
+# Extract disease severity category scores (commonly species scores)
+severity.scores <- comm.mds$species
+
+# Relabel severity scores
+rownames(severity.scores) <- c("Absent","Trace", 
                               "Low", "Mid")
 
 mycols.month <- cb[c("blue", "red")] ##setting up vector to color points by depth, data set won't ignore third depth so added extra for 'ghost' mid depth)
@@ -1174,29 +1409,31 @@ add_label(x = 0.78, lab = substitute(paste(R^2 == rsq),
                                      list(rsq = format(Rsq, digit = 5))))
 
 # Plot each region's site scores in a different color and shape
-points(quad.scores[1:3,], pch = 21, bg = mycols.month[1], col = mycols.month[1])
-points(quad.scores[4:6,], pch = 22, bg = mycols.month[2], col = mycols.month[2])
+points(quad.scores[1:3,], pch = 21, bg = mycols.month[1], col = mycols.month[1], cex = 2.5)
+points(quad.scores[4:6,], pch = 22, bg = mycols.month[2], col = mycols.month[2], cex = 2)
 
-month.names <- paste(levels(Llast.lpc.cat$season)) #, "month")
-legend(x = "topleft", legend = month.names, pch = (1:2) + 20, 
+month.names <- c("July", "October")
+legend(x = "topright", legend = month.names, pch = (1:2) + 20, 
        col = mycols.month, 
-       pt.bg = mycols.month)
-text(severity.scores, rownames(severity.scores), col = cb["pink"])
+       pt.bg = mycols.month, cex = 2)
+text(severity.scores, rownames(severity.scores), col = cb["pink"], cex = 2)
 
 regions <- Llast.lpc.cat$season
 #regions2 <- wb$depth
 
-env <- subset(Llast.lpc.cat, select = c("season"))
+expl.all <- subset(Llast.lpc.cat, select = c("season"))
 
-expl.fit <- envfit(comm.mds, expl.all, permu = 999, na.rm = TRUE)
-env.fit <- envfit(comm.mds, env, permu = 999, na.rm = TRUE)
-biotic.fit <- envfit(comm.mds, biotic, permu = 999, na.rm = TRUE)
+#env <- subset(Llast.lpc.cat, select = c("season"))
+
+expl.fit <- envfit(comm.mds, expl.all, permu = 700, na.rm = TRUE)
+#env.fit <- envfit(comm.mds, env, permu = 999, na.rm = TRUE)
+#biotic.fit <- envfit(comm.mds, biotic, permu = 999, na.rm = TRUE)
 expl.fit
-env.fit
-biotic.fit
+#env.fit
+#biotic.fit
 
-rownames(expl.fit$factors$centroids) <- c("July", "October" , "" , "")
-rownames(expl.fit$vectors$arrows) <- c("Density", "Length")
+rownames(expl.fit$factors$centroids) <- c("July", "October")
+#rownames(expl.fit$vectors$arrows) <- c("Density", "Length")
 
 expl.fit2 <- expl.fit
 #expl.fit2$vectors <- NULL
@@ -1209,7 +1446,6 @@ pl <- ordiellipse(comm.mds, regions, kind = "se", conf = 0.95, lwd = 2,
 
 
 ```
-
 
 ##intensity- avg 5 shoot from field
 ```{r}
@@ -1338,23 +1574,117 @@ bargraph.CI(x.factor = month.collected,
             #group = month.collected,
             data = wb.quad,
             ylim = c(0,1.1),
-            main = "scan all leaves in sheath Prevalence (only of infected shoots)",
-            ylab = "Proportion of leaves infected on infected shoots", legend = T)
+            col = c(cb["blue"], cb["red"]))
+            #main = "scan all leaves in sheath Prevalence (only of infected shoots)",
+            #ylab = "Proportion of leaves infected on infected shoots", legend = T)
 
 model <- glm(cbind(leaf.present.i, leaf.absent.i) ~ month.collected*depth, na.action = na.omit, data = filter(wb.quad, depth != "mid"), family = binomial)
 anova(model, test = "LR") #significant effect of month collected, fewer infected in July than in October
 
 
-bargraph.CI(x.factor = depth,
+bargraph.CI(x.factor = month.collected,
             response = leaf.absent.i,
-            group = month.collected,
+            #group = depth,
             data = wb.quad,
             ylim = c(0,3),
-            main = "scan number of healthy leaves in sheath (only of infected shoots)",
-            ylab = "Number of healthy leaves in sheath of infected shoots", legend = T)
+            #main = "scan number of healthy leaves in sheath (only of infected shoots)",
+            #ylab = "Number of healthy leaves in sheath of infected shoots", legend = T)
+            col = c(cb["blue"], cb["red"]))
 model <- aov(leaf.absent.i ~ month.collected*depth, data = filter(wb.quad, depth != "mid"))
 anova(model)
 
 ```
 
+#TEMPERATURE DATA
+```{r}
+wb_temp <- read.csv("WB_tempdata_14-17.csv", header = T) #uploading data
+str(wb_temp)
+
+#formating datetimestamp
+wb_temp$datetimestamp <- ymd_hms(wb_temp$datetimestamp)
+class(wb_temp$datetimestamp)
+tz(wb_temp$datetimestamp) #check what time zone are we in
+wb_temp$datetimestamp <- ymd_hms(wb_temp$datetimestamp, tz = "America/Jamaica") #Setting class as posix = good for date time stamps and also setting time zone
+class(wb_temp$datetimestamp)
+tz(wb_temp$datetimestamp) 
+
+wb_temp <- wb_temp %>% 
+  mutate(
+    mo = month(datetimestamp, label = TRUE))
+
+head(wb_temp)
+
+focal.months <- wb_temp %>%
+  filter(month == 7 | month == 10)
+focal.months$temp.C <- ifelse(focal.months$mo == "Jul" & focal.months$year == "2017", NA, focal.months$temp.C)
+
+#Full time series
+ggplot(wb_temp, aes(x = datetimestamp, y = temp.C, colour = transect)) + 
+  geom_line()
+
+bargraph.CI(x.factor = mo,
+            response = temp.C,
+            group = transect,
+            data = wb_temp,
+            ylim = c(0,20),
+            legend = T)
+
+#Only July and October
+ggplot(focal.months, aes(x = datetimestamp, y = temp.C, colour = transect)) + 
+  geom_line()
+
+ggplot(focal.months, aes(x = mo, y = temp.C)) + 
+  geom_boxplot() +
+  scale_y_continuous(name = "Temperature C", breaks = seq(0,25, 5), limits = c(0,25)) +
+  #scale_x_discrete(name = "Month") +
+  facet_grid(.~ transect)
+
+bargraph.CI(x.factor = mo,
+            response = temp.C.mean,
+            group = transect,
+            data = focal.months.sum,
+            ylim = c(10,18),
+            legend = T)
+
+focal.months.sum <- focal.months %>%
+  group_by(year, mo, transect) %>%
+  summarize(temp.C.mean = mean(temp.C, na.rm = T), temp.C.max = max(temp.C, na.rm = T), temp.C.min = min(temp.C, na.rm = T), temp.C.var = var(temp.C, na.rm = T))
+
+#mean monthly temp
+model <- aov(temp.C.mean ~ year*transect*mo, data = focal.months.sum)
+anova(model)
+
+#montly temp
+model <- aov(temp.C ~ year*transect*mo, data = focal.months)
+anova(model)
+model <-aov(temp.C ~ transect*mo, data = focal.months)
+anova(model)
+posthoc <- TukeyHSD(x=model, 'transect:mo', conf.level=0.95)
+posthoc
+
+
+```
+
+#MAP
+```{r}
+setwd("~/Dropbox/EEMB Graduate/Research/ZosteraWastingDisease/Greenhouse_Mesocosm/Innoculation Trials/Trial_2/State Boundaries/MA Boundary")
+ogrInfo(".", "GISDATA_OUTLINE25K_ARC")
+MA.boundary <- readOGR(dsn = ".", layer = "GISDATA_OUTLINE25K_ARC")   #layer of MA State boundary
+
+setwd("~/Dropbox/EEMB Graduate/Research/ZosteraWastingDisease/Greenhouse_Mesocosm/Innoculation Trials/Trial_2/NE_seagrass_habitat/MassDEP Seagrass (1995 and 2001)")
+ogrInfo(".", "GISDATA_EELGRASS_POLY")
+zm.95.01 <- readOGR(dsn = ".", layer = "GISDATA_EELGRASS_POLY")   #layer of seagrass habitat MA
+
+map("worldHires", "usa", xlim = c(-71.2,-70.45), ylim = c(42.2, 42.72), col = "white", fill = FALSE)
+plot(MA.boundary, add = TRUE, xlim = c(-71.2,-70.45), ylim = c(42.2, 42.65), col = "grey80")
+plot(zm.95.01, add = TRUE, xlim = c(-71.2,-70.45), ylim = c(42.2, 42.65), col = "darkgreen", border = FALSE)
+points(-70.80609, 42.55913, pch = 19, col = "Red", cex = 2)
+points(-71.056443, 42.357611, pch = 18, col = "Black", cex = 2)
+#text(-71.02, 42.335, "EPA Offices, Boston, MA")
+points(-70.907348, 42.418700, pch = 18, col = "Black", cex = 2)
+#text(-71.02, 42.335, "Marine Science Center, Nahant, MA")
+points(-70.676975, 42.615447, pch = 18, col = "Black", cex = 2)
+map.scale(-70.637, 42.25, ratio = FALSE)
+box(col = "darkblue", lwd = "3")
+```
 
