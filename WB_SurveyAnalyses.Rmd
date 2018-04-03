@@ -1100,6 +1100,8 @@ rownames(tab.season) <- c("july", "october")
 colnames(tab.season) <- c("trace", "low")
 fisher.test(tab.season) #lesion severity is lower in fall than in summer
 
+tab.season
+
 #depth
 tab.depth <- matrix(data = c(13, 34, 11, 14), nrow = 2, ncol = 2)
 rownames(tab.depth) <- c("deep", "shm")
@@ -1230,7 +1232,7 @@ bargraph.CI(x.factor = depth,
             main = "scan oldest leaf in sheath intensity",
             ylab = "Lesion percent cover", legend = T)
 
-model <- aov(logit.Llast.lpc.intensity ~ month.collected*depth, data = wb.quad)
+model <- aov(logit.Llast.lpc.intensity ~ month.collected*depth, data = filter(wb.quad, depth != "mid"))
 anova(model) #no significant effects
 shapiro.test(model$residuals) #fails even with transformation
 hist(wb.quad$Llast.lpc.intensity)
@@ -1247,6 +1249,8 @@ rownames(tab.season) <- c("july", "october")
 colnames(tab.season) <- c("trace", "low/mid")
 fisher.test(tab.season) #Not significant
 chisq.test(tab.season) #Not significant
+
+tab.season
 
 table.Llast.lps.cat.season<- matrix(c(9,15,3,15,14,0), ncol = 3, byrow = 2)
   colnames(table.Llast.lps.cat.season) <- c("trace", "low", "mid")
@@ -1449,15 +1453,15 @@ pl <- ordiellipse(comm.mds, regions, kind = "se", conf = 0.95, lwd = 2,
 
 ##intensity- avg 5 shoot from field
 ```{r}
-bargraph.CI(x.factor = depth,
+bargraph.CI(x.factor = month.collected,
             response = field.est.intensity,
-            group = month.collected,
-            data = wb.quad,
+            #group = depth,
+            data = filter(wb.quad, depth != "mid"),
             ylim = c(0,3),
             main = "Field oldest leaf in sheath intensity",
             ylab = "Relative lesion percent cover", legend = T)
 
-model <- aov(field.est.intensity ~ month.collected*depth, data = wb.quad)
+model <- aov(field.est.intensity ~ month.collected*depth, data = filter(wb.quad, depth != "mid"))
 anova(model)
 ```
 
@@ -1618,9 +1622,14 @@ focal.months <- wb_temp %>%
   filter(month == 7 | month == 10)
 focal.months$temp.C <- ifelse(focal.months$mo == "Jul" & focal.months$year == "2017", NA, focal.months$temp.C)
 
+wb_temp$temp.C.10yr <- wb_temp$temp.C+2.3
+
 #Full time series
-ggplot(wb_temp, aes(x = datetimestamp, y = temp.C, colour = transect)) + 
-  geom_line()
+ggplot(filter(wb_temp, transect == "A"), aes(x = datetimestamp)) + 
+  geom_line(aes(y = temp.C), color = "black") +
+  geom_line(aes(y = temp.C.10yr), color = "grey", linetype = "dashed") + 
+  scale_y_continuous(breaks = c(0, 5, 10, 15, 20, 25, 30), limits = c(0,30))+
+  theme_classic()
 
 bargraph.CI(x.factor = mo,
             response = temp.C,
